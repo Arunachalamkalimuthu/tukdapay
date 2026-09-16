@@ -4,7 +4,7 @@
 under a per-transaction limit (default ₹1999), then pay each part from your
 own UPI app — GPay, PhonePe, Paytm, BHIM, any of them.
 
-Live: https://arunachalamkalimuthu.github.io/tukdapay/
+Live: https://tukdapay.com/
 
 [![test](https://github.com/Arunachalamkalimuthu/tukdapay/actions/workflows/test.yml/badge.svg)](https://github.com/Arunachalamkalimuthu/tukdapay/actions/workflows/test.yml)
 
