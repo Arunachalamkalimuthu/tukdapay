@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createPlan, breakdownText, parsePlan, countParts, MAX_PARTS, type Plan } from '../lib/plan.ts';
+import { createPlan, breakdownText, parsePlan, countParts, sameInput, shouldKeepPlan, MAX_PARTS, type Plan } from '../lib/plan.ts';
+import { MAX_AMOUNT } from '../lib/format.ts';
 import { splitAmount } from '../lib/split.ts';
 
 const input = { total: 5000, pa: 'shop@upi', pn: 'Tea Shop', note: 'Table 4', maxPerTxn: 1999 };
@@ -73,6 +74,24 @@ test('parsePlan drops unknown fields', () => {
   assert.deepEqual(parsePlan(saved), createPlan(input));
 });
 
+test('parsePlan rejects a plan with more than MAX_PARTS parts', () => {
+  const big = createPlan({ total: 1000000, pa: 'shop@okaxis', pn: '', note: '', maxPerTxn: 1999 });
+  assert.equal(big.parts.length, 501);
+  assert.equal(parsePlan(roundTrip(big)), null);
+  const most = createPlan({ total: MAX_PARTS * 1999, pa: 'shop@okaxis', pn: '', note: '', maxPerTxn: 1999 });
+  assert.equal(most.parts.length, MAX_PARTS);
+  assert.deepEqual(parsePlan(roundTrip(most)), most);
+});
+
+test('parsePlan rejects a plan whose amounts the form would not take', () => {
+  const huge = roundTrip(createPlan(input)) as unknown as { input: Record<string, unknown> };
+  huge.input.total = 1e21;
+  assert.equal(parsePlan(huge), null);
+  const tinyMax = roundTrip(createPlan(input)) as unknown as { input: Record<string, unknown> };
+  tinyMax.input.maxPerTxn = 0.001;
+  assert.equal(parsePlan(tinyMax), null);
+});
+
 test('parsePlan rejects malformed data', () => {
   const good = () => roundTrip(createPlan(input)) as unknown as { input: Record<string, unknown>; parts: Record<string, unknown>[] };
   const broken: [string, unknown][] = [
@@ -121,7 +140,13 @@ test('countParts matches splitAmount without building the parts', () => {
 });
 
 test('countParts copes with huge amounts instantly', () => {
-  assert.equal(countParts(1e12, 1999), Math.ceil(1e14 / 199900));
+  assert.equal(countParts(MAX_AMOUNT, 0.01), MAX_AMOUNT * 100);
+});
+
+test('countParts is 0 for amounts over MAX_AMOUNT', () => {
+  assert.equal(countParts(1e12, 1999), 0);
+  assert.equal(countParts(1e307, 1e307), 0);
+  assert.equal(countParts(5000, 1e21), 0);
 });
 
 test('countParts is 0 when either amount is not a positive number of paise', () => {
@@ -134,4 +159,39 @@ test('countParts is 0 when either amount is not a positive number of paise', () 
 
 test('MAX_PARTS is a sane cap', () => {
   assert.ok(MAX_PARTS >= 50 && MAX_PARTS <= 500);
+});
+
+// ---- keeping a plan in progress --------------------------------------------------
+
+test('sameInput compares every input, amounts to the paisa', () => {
+  assert.equal(sameInput(input, { ...input }), true);
+  assert.equal(sameInput({ ...input, total: 4999.555 }, { ...input, total: 4999.56 }), true);
+  const changes: Partial<typeof input>[] = [
+    { total: 5000.01 },
+    { maxPerTxn: 1000 },
+    { pa: 'other@upi' },
+    { pa: 'SHOP@upi' },
+    { pn: 'Tea shop' },
+    { pn: '' },
+    { note: 'Table 5' },
+    { note: '' },
+  ];
+  for (const change of changes) assert.equal(sameInput(input, { ...input, ...change }), false, JSON.stringify(change));
+});
+
+test('shouldKeepPlan keeps a plan with paid parts when the inputs are the same', () => {
+  const plan = createPlan(input);
+  plan.parts[0].paid = true;
+  assert.equal(shouldKeepPlan(plan, { ...input }), true);
+  plan.parts.forEach((p) => (p.paid = true));
+  assert.equal(shouldKeepPlan(plan, { ...input }), true);
+});
+
+test('shouldKeepPlan makes a new plan when nothing is paid, the inputs differ or there is no plan', () => {
+  const plan = createPlan(input);
+  assert.equal(shouldKeepPlan(plan, { ...input }), false);
+  plan.parts[1].paid = true;
+  assert.equal(shouldKeepPlan(plan, { ...input, total: 6000 }), false);
+  assert.equal(shouldKeepPlan(plan, { ...input, note: 'Table 5' }), false);
+  assert.equal(shouldKeepPlan(null, input), false);
 });
