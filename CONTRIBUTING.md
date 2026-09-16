@@ -1,36 +1,56 @@
 # Contributing to TukdaPay
 
-Thanks for helping. Keep it small and simple — this is a static page with no
-build step, and we'd like it to stay that way.
+Thanks for helping. TukdaPay is a Next.js app exported as a static site: no
+server, no account, no tracking. Keep it small and simple.
 
 ## Setup
+
+Needs Node 22 or newer.
 
 ```sh
 git clone https://github.com/Arunachalamkalimuthu/tukdapay
 cd tukdapay
-npm test      # node >= 20, no dependencies to install
-npm start     # http://localhost:3000
+npm ci
+npm run dev   # http://localhost:3000
 ```
+
+See the [README](README.md#project-layout) for the project layout, writing a
+blog post and adding a use case.
 
 ## Ground rules
 
-- Logic lives in `src/split.js`, `src/upi.js`, `src/plan.js` and must have
-  tests in `test/`. Write the failing test first.
-- `src/app.js` is DOM wiring only. Keep it free of business logic.
-- No frameworks, no bundlers, no npm dependencies at runtime. The one CDN
-  import (`qrcode`) is loaded lazily and the page must still work if it fails.
-- Copy is plain, sentence case, from the user's point of view.
+- Pure logic lives in `lib/` and has `node:test` tests in `test/`. Write the
+  failing test first. Inside `lib/`, import other files with the `.ts`
+  extension (`./split.ts`) so `npm test` can run them.
+- Components are UI wiring. Keep business logic out of them; if it can be
+  tested without a browser, it belongs in `lib/`.
+- Style with CSS Modules and the tokens in `app/globals.css`. No Tailwind or
+  UI kits.
+- Keep runtime dependencies to a minimum, and say in the PR why a new one is
+  needed.
+- `qrcode` stays lazily loaded, and the page must still work if it fails to
+  load.
+- Every page except home exports metadata built with `pageMetadata()` from
+  `lib/metadata.ts`, so it gets its own canonical URL.
+- Copy is plain, sentence case, from the user's point of view, in Indian
+  English, with amounts grouped the Indian way (₹1,00,000). Never claim what the current UPI fee or
+  limit rule is.
 - Test on a real phone before submitting UI changes — the `upi://` handoff
-  only works there.
+  only works there. Check light and dark mode, and a 360px-wide screen.
 
 ## Pull requests
 
 1. Fork, branch from `main`.
-2. `npm test` must pass.
-3. Describe what changed and why; add a screenshot for UI changes.
+2. All of these must pass:
+   ```sh
+   npm test
+   npm run typecheck
+   npm run lint
+   npm run build
+   ```
+3. Describe what changed and why. Add screenshots for UI changes.
 
 ## Ideas welcome
 
 - Scan a merchant's UPI QR sticker instead of typing the ID
 - Hindi / Tamil / other language UI
-- Share the breakdown via WhatsApp
