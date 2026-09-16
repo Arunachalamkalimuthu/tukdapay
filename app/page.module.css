@@ -1,0 +1,25 @@
+.hero h1 { font-size: 40px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.02; margin: 0 0 12px; }
+.hero p { margin: 0 0 18px; color: var(--muted); max-width: 42ch; }
+.example { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 0 0 36px; font-weight: 700; }
+.exTotal { font-size: 22px; font-weight: 800; }
+.exOp { color: var(--muted); font-weight: 500; }
+.exPart { background: var(--surface); border: 1.5px solid var(--line); border-radius: 8px; padding: 3px 9px; }
+.exPart.last { border-color: var(--accent); color: var(--accent); }
+
+.steps { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 14px; }
+.steps li { counter-increment: step; display: grid; grid-template-columns: 34px 1fr; gap: 12px; color: var(--muted); max-width: 52ch; }
+.steps li::before { content: counter(step); width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-weight: 800; }
+.steps strong, .why strong { color: var(--ink); }
+.why { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+.why li { color: var(--muted); max-width: 52ch; }
+
+.faq dl { margin: 0; }
+.faq dt { font-weight: 700; margin-top: 16px; }
+.faq dd { margin: 4px 0 0; color: var(--muted); max-width: 52ch; }
+
+.posts { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
+.posts li { display: grid; gap: 2px; }
+.posts li a { color: var(--ink); font-weight: 700; text-decoration: none; }
+.posts li a:hover { color: var(--accent); }
+.posts li span { color: var(--muted); max-width: 52ch; }
+.more { display: inline-block; margin-top: 16px; font-weight: 700; }

@@ -1,12 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildUpiUrl, isValidVpa } from '../src/upi.js';
+import { buildUpiUrl, isValidVpa } from '../lib/upi.ts';
 
 test('minimal url has pa, am with two decimals, and cu=INR', () => {
-  assert.equal(
-    buildUpiUrl({ pa: 'shop@upi', am: 1999 }),
-    'upi://pay?pa=shop%40upi&am=1999.00&cu=INR'
-  );
+  assert.equal(buildUpiUrl({ pa: 'shop@upi', am: 1999 }), 'upi://pay?pa=shop%40upi&am=1999.00&cu=INR');
 });
 
 test('optional pn and tn are included when given', () => {
@@ -17,10 +14,7 @@ test('optional pn and tn are included when given', () => {
 });
 
 test('empty pn and tn are omitted', () => {
-  assert.equal(
-    buildUpiUrl({ pa: 'shop@upi', pn: '', am: 10, tn: '   ' }),
-    'upi://pay?pa=shop%40upi&am=10.00&cu=INR'
-  );
+  assert.equal(buildUpiUrl({ pa: 'shop@upi', pn: '', am: 10, tn: '   ' }), 'upi://pay?pa=shop%40upi&am=10.00&cu=INR');
 });
 
 test('rejects malformed VPA', () => {

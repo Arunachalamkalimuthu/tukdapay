@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createPlan, breakdownText } from '../src/plan.js';
+import { createPlan, breakdownText } from '../lib/plan.ts';
 
 const input = { total: 5000, pa: 'shop@upi', pn: 'Tea Shop', note: 'Table 4', maxPerTxn: 1999 };
 
@@ -25,17 +25,12 @@ test('createPlan keeps the inputs for persistence', () => {
 });
 
 test('breakdownText lists every part on its own line', () => {
-  const text = breakdownText(createPlan(input));
   assert.equal(
-    text,
-    'Total ₹5000.00 to shop@upi (Tea Shop) in 3 parts:\n' +
-      'Part 1/3: ₹1999.00\n' +
-      'Part 2/3: ₹1999.00\n' +
-      'Part 3/3: ₹1002.00'
+    breakdownText(createPlan(input)),
+    'Total ₹5,000.00 to shop@upi (Tea Shop) in 3 parts:\nPart 1/3: ₹1,999.00\nPart 2/3: ₹1,999.00\nPart 3/3: ₹1,002.00'
   );
 });
 
 test('breakdownText omits the name when not given', () => {
-  const text = breakdownText(createPlan({ ...input, pn: '', total: 100 }));
-  assert.equal(text, 'Total ₹100.00 to shop@upi in 1 part:\nPart 1/1: ₹100.00');
+  assert.equal(breakdownText(createPlan({ ...input, pn: '', total: 100 })), 'Total ₹100.00 to shop@upi in 1 part:\nPart 1/1: ₹100.00');
 });

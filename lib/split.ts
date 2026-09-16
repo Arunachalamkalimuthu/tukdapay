@@ -1,10 +1,10 @@
-const round2 = (n) => Math.round(n * 100) / 100;
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
 /**
  * Split `total` rupees into chunks no larger than `maxPerTxn`.
  * Greedy: full chunks first, remainder last. Chunks always sum to `total`.
  */
-export function splitAmount(total, maxPerTxn = 1999) {
+export function splitAmount(total: number, maxPerTxn = 1999): number[] {
   if (!Number.isFinite(total) || total <= 0) {
     throw new RangeError('total must be a positive finite number');
   }
@@ -15,7 +15,7 @@ export function splitAmount(total, maxPerTxn = 1999) {
   total = round2(total);
   maxPerTxn = round2(maxPerTxn);
 
-  const chunks = [];
+  const chunks: number[] = [];
   let remaining = total;
   while (remaining > maxPerTxn) {
     chunks.push(maxPerTxn);

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { splitAmount } from '../src/split.js';
+import { splitAmount } from '../lib/split.ts';
 
 test('amount at or below the threshold is a single chunk', () => {
   assert.deepEqual(splitAmount(1999), [1999]);
