@@ -1,0 +1,11 @@
+.wrap { padding-top: 56px; }
+.code { margin: 0 0 8px; color: var(--accent); font-weight: 800; font-size: 15px; letter-spacing: 0.06em; }
+.title { font-size: 36px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; margin: 0 0 12px; }
+.lead { margin: 0 0 28px; color: var(--muted); max-width: 42ch; }
+.primary { width: 100%; }
+.more { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+
+@media (min-width: 520px) {
+  .primary { width: auto; }
+  .more { display: flex; flex-wrap: wrap; }
+}
