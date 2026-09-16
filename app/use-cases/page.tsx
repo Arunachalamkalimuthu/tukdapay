@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { JsonLd } from '@/components/JsonLd';
+import { TukdaStrip } from '@/components/TukdaStrip';
 import { tryHref, useCases } from '@/content/useCases';
-import { formatInr } from '@/lib/format';
+import { formatRupees } from '@/lib/format';
 import { pageMetadata } from '@/lib/metadata';
 import { DEFAULT_MAX, SITE_URL } from '@/lib/site';
 import { splitAmount } from '@/lib/split';
+import { collapseText } from '@/lib/strip';
 import s from './page.module.css';
 
 export const metadata = pageMetadata({
@@ -14,14 +16,11 @@ export const metadata = pageMetadata({
   path: '/use-cases/',
 });
 
-/** ₹14,999.00 -> ₹14,999; keeps paise when there are any. */
-const rupees = (n: number) => formatInr(n).replace(/\.00$/, '');
-
 const scenarios = useCases.map((u) => ({ ...u, parts: splitAmount(u.amount, DEFAULT_MAX) }));
 
 export default function UseCasesPage() {
   return (
-    <div className="page wide">
+    <div className="page">
       <JsonLd
         data={{
           '@context': 'https://schema.org',
@@ -47,68 +46,64 @@ export default function UseCasesPage() {
           or just to keep each payment small.
         </p>
         <p>
-          Here are eight of them, each with the exact split TukdaPay makes at {rupees(DEFAULT_MAX)} a payment. Pick
-          one to open the splitter with that amount filled in.
+          Here are eight of them, each with the exact split TukdaPay makes at {formatRupees(DEFAULT_MAX)} a
+          payment. Pick one to open the splitter with that amount filled in.
         </p>
       </header>
 
-      <nav className={s.jump} aria-label="Jump to a use case">
+      {/* An index, like a price list: the kind of bill, dot leaders, then its total. */}
+      <nav className={s.index} aria-label="Jump to a use case">
         <ul>
           {scenarios.map((u) => (
             <li key={u.slug}>
-              <a href={`#${u.slug}`}>{u.who}</a>
+              <a href={`#${u.slug}`}>
+                <span className={s.indexName}>{u.who}</span>{' '}
+                <span className={s.leader} aria-hidden="true" />{' '}
+                <span className={`money ${s.indexTotal}`}>{formatRupees(u.amount)}</span>
+              </a>
             </li>
           ))}
         </ul>
       </nav>
 
-      <div className={s.list}>
+      <div className={s.cases}>
         {scenarios.map((u) => {
           const count = u.parts.length;
+          const total = formatRupees(u.amount);
           return (
-            <article key={u.slug} id={u.slug} className={s.card} aria-labelledby={`${u.slug}-title`}>
-              <hgroup className={s.head}>
-                <p className={s.who}>{u.who}</p>
+            <article key={u.slug} id={u.slug} className={s.case} aria-labelledby={`${u.slug}-title`}>
+              <div className={s.caseHead}>
                 <h2 id={`${u.slug}-title`}>{u.title}</h2>
-              </hgroup>
+                <p className={`t-money ${s.caseTotal}`}>{total}</p>
+              </div>
+              <p className={s.who}>{u.who}</p>
               <p className={s.story}>{u.story}</p>
 
-              <div className={s.split}>
-                <p className={s.sum}>
-                  <span className={s.total}>{rupees(u.amount)}</span>
-                  <span className={s.arrow} aria-hidden="true">→</span>
-                  <span className={s.count}>
-                    <span className={s.srOnly}>splits into </span>
-                    {count === 1 ? '1 payment' : `${count} payments`}
-                  </span>
+              {/* The split as a slip. The strip is decorative, so the figures are also written out for screen readers. */}
+              <div className={s.slip}>
+                <p className={s.slipHead}>
+                  <span className={`money ${s.slipTotal}`}>{total}</span>{' '}
+                  {count === 1 ? 'in 1 payment' : `in ${count} payments`}
+                  <span className="sr-only">: {collapseText(u.parts)}</span>
                 </p>
-                <ol className={s.chips} aria-label={`The ${count} payments`}>
-                  {u.parts.map((part, i) => (
-                    <li key={i}>
-                      <span className={i === count - 1 ? `${s.chip} ${s.last}` : s.chip}>{rupees(part)}</span>
-                      {i < count - 1 && (
-                        <span className={s.plus} aria-hidden="true">
-                          +
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ol>
+                <TukdaStrip variant="slip" parts={u.parts} />
               </div>
 
               <p className={s.tip}>
                 <strong>Tip:</strong> {u.tip}
               </p>
 
-              <Link className={`btn btn-primary ${s.action}`} href={tryHref(u)}>
-                {`Try with ${rupees(u.amount)}`}
+              <Link className={`btn btn-outline ${s.action}`} href={tryHref(u)}>
+                <span>
+                  Try with <span className="money">{total}</span>
+                </span>
               </Link>
             </article>
           );
         })}
       </div>
 
-      <section className={`section ${s.merchants}`} aria-labelledby="merchants-title">
+      <section className={s.merchants} aria-labelledby="merchants-title">
         <h2 id="merchants-title">If you’re the merchant</h2>
         <ul>
           <li>
@@ -130,7 +125,7 @@ export default function UseCasesPage() {
         </ul>
       </section>
 
-      <section className={`section ${s.cta}`} aria-labelledby="own-bill-title">
+      <section className={s.cta} aria-labelledby="own-bill-title">
         <h2 id="own-bill-title">Your bill isn’t on the list?</h2>
         <p>
           Any amount works. Enter the bill and the shop’s UPI ID, then pay each part from GPay, PhonePe, Paytm

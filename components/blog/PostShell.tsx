@@ -65,15 +65,17 @@ function structuredData(post: PostMeta) {
 export function PostShell({ post, children }: { post: PostMeta; children?: ReactNode }) {
   const others = posts.filter((p) => p.slug !== post.slug).slice(0, 3);
   return (
-    <div className="page wide">
+    <div className="page">
       <JsonLd data={structuredData(post)} />
       <article className={s.post}>
+        {/* The way back on the left, the date on the right: space separates them, not a dot. */}
         <p className={s.meta}>
-          <Link href="/blog/">Blog</Link> · <time dateTime={post.date}>{formatDate(post.date)}</time>
+          <Link href="/blog/">Blog</Link>{' '}
+          <time dateTime={post.date}>{formatDate(post.date)}</time>
         </p>
         <h1>{post.title}</h1>
         {children}
-        <p className={s.footer}>
+        <p className={s.issue}>
           Found a mistake? <a href={`${REPO_URL}/issues`}>Open an issue</a> — this post lives in the repo too.
         </p>
       </article>

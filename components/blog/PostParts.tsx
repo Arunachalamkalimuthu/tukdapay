@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+import { isValidElement, type ComponentPropsWithoutRef, type ReactNode } from 'react';
 import Link from 'next/link';
 import s from './Post.module.css';
 
@@ -8,9 +8,29 @@ export function SmartLink({ href = '', ...rest }: ComponentPropsWithoutRef<'a'>)
   return <a href={href} {...rest} />;
 }
 
-/** Code blocks scroll sideways on their own; tabIndex lets keyboard users focus and scroll them. */
+const LANGUAGE_NAMES: Record<string, string> = {
+  ts: 'TypeScript',
+  tsx: 'TypeScript',
+  js: 'JavaScript',
+  jsx: 'JavaScript',
+  json: 'JSON',
+  sh: 'Shell',
+  bash: 'Shell',
+};
+
+/** "TypeScript code" for a ```ts block, "Code" when the block names no language. */
+function codeLabel(children: ReactNode): string {
+  if (!isValidElement<{ className?: string }>(children)) return 'Code';
+  const language = /(?:^|\s)language-(\S+)/.exec(children.props.className ?? '')?.[1];
+  return language ? `${LANGUAGE_NAMES[language] ?? language} code` : 'Code';
+}
+
+/**
+ * Code blocks scroll sideways on their own; tabIndex lets keyboard users focus and scroll them,
+ * and the region role gives that focus stop a name.
+ */
 export function CodeBlock(props: ComponentPropsWithoutRef<'pre'>) {
-  return <pre tabIndex={0} {...props} />;
+  return <pre tabIndex={0} role="region" aria-label={codeLabel(props.children)} {...props} />;
 }
 
 /**
@@ -42,7 +62,7 @@ export function Callout({ children }: { children: ReactNode }) {
 export function Cta({ href, children }: { href: string; children: ReactNode }) {
   return (
     <p className={s.ctaWrap}>
-      <SmartLink className={s.cta} href={href}>
+      <SmartLink className="btn btn-primary" href={href}>
         {children}
       </SmartLink>
     </p>

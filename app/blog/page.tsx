@@ -11,7 +11,7 @@ export const metadata = pageMetadata({ title: 'Blog', description: FEED_DESCRIPT
 export default function BlogIndexPage() {
   const list = newestFirst(posts);
   return (
-    <div className="page wide">
+    <div className="page">
       <JsonLd
         data={{
           '@context': 'https://schema.org',
@@ -36,7 +36,9 @@ export default function BlogIndexPage() {
         <p>Plain-language guides on UPI: splitting payments, what the rules actually say, and how the links under the hood work.</p>
       </header>
 
-      <PostList posts={list} headingLevel={2} />
+      <div className={s.posts}>
+        <PostList posts={list} headingLevel={2} />
+      </div>
 
       <p className={s.feed}>
         New posts by RSS: <a href="/blog/feed.xml">subscribe to the feed</a>

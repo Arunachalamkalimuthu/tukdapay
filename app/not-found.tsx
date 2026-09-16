@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { TukdaStrip } from '@/components/TukdaStrip';
 import s from './not-found.module.css';
 
 export const metadata: Metadata = {
@@ -17,23 +18,27 @@ export const metadata: Metadata = {
 
 export default function NotFound() {
   return (
-    <div className={`page ${s.wrap}`}>
-      <p className={s.code}>404</p>
+    <div className="page">
+      {/* A bill with one piece missing, "404" in the gap. Decorative, so the status is also written out. */}
+      <TukdaStrip variant="missing" className={s.strip} />
+      <p className="sr-only">Error 404</p>
       <h1 className={s.title}>We couldn’t find that page</h1>
       <p className={s.lead}>
         The link may be old or have a typo. If you came to split a bill, the splitter is one tap away.
       </p>
-      <Link className={`btn btn-primary ${s.primary}`} href="/">
-        Split a payment
-      </Link>
-      <nav className={s.more} aria-label="Other pages">
-        <Link className="btn btn-secondary" href="/use-cases/">
-          Use cases
+      <div className={s.actions}>
+        <Link className={`btn btn-primary ${s.primary}`} href="/">
+          Split a payment
         </Link>
-        <Link className="btn btn-secondary" href="/blog/">
-          Blog
-        </Link>
-      </nav>
+        <nav className={s.more} aria-label="Other pages">
+          <Link className="btn btn-secondary" href="/use-cases/">
+            Use cases
+          </Link>
+          <Link className="btn btn-secondary" href="/blog/">
+            Blog
+          </Link>
+        </nav>
+      </div>
     </div>
   );
 }
