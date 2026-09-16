@@ -1,0 +1,13 @@
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 26px; }
+.list li { display: grid; gap: 4px; }
+
+.title { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; margin: 0; text-wrap: balance; }
+.title a { color: var(--ink); text-decoration: none; }
+.title a:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+
+.description { margin: 0; color: var(--muted); max-width: 52ch; }
+.date { margin: 0; color: var(--muted); font-size: 15px; }
+
+.compact { gap: 18px; }
+.compact li { gap: 2px; }
+.compact .title { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }

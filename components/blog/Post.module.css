@@ -1,0 +1,62 @@
+/* Blog post typography, ported from the old blog/blog.css. Everything is scoped under .post. */
+.post { overflow-wrap: break-word; }
+
+.post h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; margin: 0 0 12px; text-wrap: balance; }
+.post h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; margin: 36px 0 10px; }
+.post h3 { font-size: 19px; font-weight: 700; line-height: 1.25; margin: 24px 0 6px; }
+.post p { margin: 0 0 14px; }
+.post p, .post li { max-width: 60ch; }
+.post ul, .post ol { margin: 0 0 14px; padding-left: 22px; }
+.post li { margin: 4px 0; }
+.post a { color: var(--accent); text-underline-offset: 2px; }
+
+.post code {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 5px;
+  padding: 1px 5px; font-size: 0.9em;
+}
+.post pre {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 14px; margin: 0 0 16px; overflow-x: auto; font-size: 15px; line-height: 1.5;
+  overflow-wrap: normal;
+}
+.post pre code { border: 0; border-radius: 0; padding: 0; background: none; font-size: inherit; }
+
+/* Tables scroll inside this box so a narrow phone never scrolls the whole page sideways. */
+.tableScroll { overflow-x: auto; margin: 12px 0 16px; }
+.post table { border-collapse: collapse; width: 100%; font-size: 16px; overflow-wrap: normal; }
+.post th, .post td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.post th { font-weight: 700; border-bottom-width: 1.5px; }
+.post th:first-child, .post td:first-child { padding-left: 0; }
+.post th:last-child, .post td:last-child { padding-right: 0; }
+.post td code { white-space: nowrap; }
+
+/* Post furniture. Prefixed with .post so it wins over the element rules above. */
+.post .meta { color: var(--muted); font-size: 15px; margin: 0 0 10px; }
+.post .meta a { color: var(--muted); }
+.post .meta a:hover { color: var(--accent); }
+
+.post .lede { color: var(--muted); font-size: 19px; line-height: 1.4; margin: 0 0 8px; }
+
+.post .callout {
+  background: var(--surface); border: 1.5px solid var(--line); border-left: 4px solid var(--accent);
+  border-radius: var(--radius); padding: 14px 16px; margin: 20px 0;
+}
+.post .callout p { margin: 0; }
+.post .callout p + p { margin-top: 10px; }
+
+.post .ctaWrap { margin: 24px 0 0; }
+.post .cta {
+  display: inline-block; background: var(--accent); color: var(--accent-ink); font-weight: 700;
+  padding: 12px 18px; border-radius: var(--radius); text-decoration: none;
+}
+.post .cta:hover { filter: brightness(1.08); }
+
+.post .footer { max-width: none; margin: 44px 0 0; border-top: 1.5px solid var(--line); padding-top: 20px; color: var(--muted); font-size: 15px; }
+
+/* "More from the blog", after the article. The issues footer above already draws a rule. */
+.more { margin-top: 56px; }
+.more h2 { font-size: 22px; font-weight: 800; margin-bottom: 14px; }
+
+@media (min-width: 560px) {
+  .post h1 { font-size: 40px; }
+}
