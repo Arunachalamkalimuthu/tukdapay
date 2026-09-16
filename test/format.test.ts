@@ -84,6 +84,11 @@ test('isValidAmount rejects amounts over MAX_AMOUNT', () => {
   assert.equal(isValidAmount(1e307), false);
 });
 
+test('rs, re and inr inside a word are not read as currency', () => {
+  assert.equal(parseAmount('fare.50'), 0.5);
+  assert.equal(sanitizeAmountInput('Figure.50'), '.50');
+});
+
 test('amounts written with Rs., Re., INR or ₹ keep their digits', () => {
   assert.equal(sanitizeAmountInput('Rs. 4,999'), '4,999');
   assert.equal(sanitizeAmountInput('Rs.4999'), '4999');
@@ -97,6 +102,7 @@ test('amounts written with Rs., Re., INR or ₹ keep their digits', () => {
   assert.equal(parseAmount('rs.4999'), 4999);
   assert.equal(parseAmount('Rs.4,999.50'), 4999.5);
   assert.equal(parseAmount('INR.500'), 500);
+  assert.equal(sanitizeAmountInput('4999Rs.'), '4999');
   assert.equal(formatInputAmount('Rs.4999'), '4,999');
 });
 

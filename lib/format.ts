@@ -9,9 +9,10 @@ export const MAX_AMOUNT_TEXT = '₹100 crore';
 
 /**
  * "Rs.", "Re.", "INR" and "₹" as people write them before (or after) an amount. The dot
- * in "Rs.4999" is part of the currency, not a decimal point, so it goes with it.
+ * in "Rs.4999" is part of the currency, not a decimal point, so it goes with it. Not when the
+ * letters end a longer word ("fare.50").
  */
-const CURRENCY = /(?:rs|re|inr)\.?|₹/gi;
+const CURRENCY = /(?<![a-z])(?:rs|re|inr)\.?|₹/gi;
 
 const stripCurrency = (s: string) => s.replace(CURRENCY, '');
 
