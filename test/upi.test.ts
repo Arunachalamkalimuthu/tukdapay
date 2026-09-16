@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildUpiUrl, isValidVpa } from '../lib/upi.ts';
+import { buildUpiUrl, isValidVpa } from '../lib/upi';
 
 test('minimal url has pa, am with two decimals, and cu=INR', () => {
   assert.equal(buildUpiUrl({ pa: 'shop@upi', am: 1999 }), 'upi://pay?pa=shop%40upi&am=1999.00&cu=INR');

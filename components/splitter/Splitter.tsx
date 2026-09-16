@@ -13,6 +13,7 @@ import s from './Splitter.module.css';
 const PLAN_KEY = 'tukdapay/plan';
 const RECENT_KEY = 'tukdapay/recent';
 type Recent = { pa: string; pn: string };
+const short = (n: number) => formatInr(n).replace('.00', '');
 
 function rememberMerchant(list: Recent[], m: Recent): Recent[] {
   return [m, ...list.filter((r) => r.pa !== m.pa)].slice(0, 5);
@@ -33,25 +34,29 @@ export function Splitter() {
   const focusResult = useRef(false);
 
   // Restore saved plan / recent merchants, then apply URL prefill on top.
+  // This has to run after hydration (localStorage is browser-only), so a
+  // state update inside the effect is intentional here.
   useEffect(() => {
     const saved = readJson<Plan>(PLAN_KEY);
-    if (saved?.parts?.length) {
-      setPlan(saved);
-      setTotal(formatInputAmount(String(saved.input.total)));
-      setPa(saved.input.pa);
-      setPn(saved.input.pn ?? '');
-      setNote(saved.input.note ?? '');
-      setMax(String(saved.input.maxPerTxn));
-    }
-    setRecent(readJson<Recent[]>(RECENT_KEY) ?? []);
-
     const q = (k: string) => params.get(k)?.trim() ?? '';
-    if (q('amount')) setTotal(formatInputAmount(q('amount')));
-    if (q('pa')) setPa(q('pa'));
-    if (q('pn')) setPn(q('pn'));
-    if (q('note')) setNote(q('note'));
-    if (q('max')) setMax(q('max'));
-  }, [params]);
+    const restored = {
+      total: q('amount') ? formatInputAmount(q('amount')) : saved ? formatInputAmount(String(saved.input.total)) : '',
+      pa: q('pa') || saved?.input.pa || '',
+      pn: q('pn') || saved?.input.pn || '',
+      note: q('note') || saved?.input.note || '',
+      max: q('max') || (saved ? String(saved.input.maxPerTxn) : String(DEFAULT_MAX)),
+      plan: saved?.parts?.length ? saved : null,
+      recent: readJson<Recent[]>(RECENT_KEY) ?? [],
+    };
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTotal(restored.total);
+    setPa(restored.pa);
+    setPn(restored.pn);
+    setNote(restored.note);
+    setMax(restored.max);
+    setPlan(restored.plan);
+    setRecent(restored.recent);
+  }, [params]);;
 
   useEffect(() => {
     if (plan && focusResult.current) {
@@ -136,12 +141,22 @@ export function Splitter() {
             ) : preview && preview.length > 1 ? (
               <>
                 <span className={s.previewLabel}>{preview.length} payments:</span>
-                {preview.map((c, i) => (
-                  <span key={i} style={{ display: 'contents' }}>
-                    <span className={`${s.chip} ${i === preview.length - 1 ? s.last : ''}`}>{formatInr(c).replace('.00', '')}</span>
-                    {i < preview.length - 1 && <span className={s.plus} aria-hidden="true">+</span>}
-                  </span>
-                ))}
+                {preview.length <= 5 ? (
+                  preview.map((c, i) => (
+                    <span key={i} style={{ display: 'contents' }}>
+                      <span className={`${s.chip} ${i === preview.length - 1 ? s.last : ''}`}>{short(c)}</span>
+                      {i < preview.length - 1 && <span className={s.plus} aria-hidden="true">+</span>}
+                    </span>
+                  ))
+                ) : preview[0] === preview[preview.length - 1] ? (
+                  <span className={s.chip}>{preview.length} × {short(preview[0])}</span>
+                ) : (
+                  <>
+                    <span className={s.chip}>{preview.length - 1} × {short(preview[0])}</span>
+                    <span className={s.plus} aria-hidden="true">+</span>
+                    <span className={`${s.chip} ${s.last}`}>{short(preview[preview.length - 1])}</span>
+                  </>
+                )}
               </>
             ) : preview ? (
               <span className={s.previewLabel}>Under the limit — one payment</span>

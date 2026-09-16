@@ -1,6 +1,6 @@
-import { splitAmount } from './split.ts';
-import { buildUpiUrl } from './upi.ts';
-import { formatInr } from './format.ts';
+import { splitAmount } from './split';
+import { buildUpiUrl } from './upi';
+import { formatInr } from './format';
 
 export interface PlanInput {
   total: number;

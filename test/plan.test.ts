@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createPlan, breakdownText } from '../lib/plan.ts';
+import { createPlan, breakdownText } from '../lib/plan';
 
 const input = { total: 5000, pa: 'shop@upi', pn: 'Tea Shop', note: 'Table 4', maxPerTxn: 1999 };
 

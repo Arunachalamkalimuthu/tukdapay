@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatInr, parseAmount, formatInputAmount } from '../lib/format.ts';
+import { formatInr, parseAmount, formatInputAmount } from '../lib/format';
 
 test('formatInr uses Indian grouping and two decimals', () => {
   assert.equal(formatInr(1999), '₹1,999.00');
