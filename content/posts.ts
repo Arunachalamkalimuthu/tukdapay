@@ -2,7 +2,7 @@ export interface PostMeta {
   slug: string;
   title: string;
   description: string;
-  date: string; // ISO
+  date: string; // ISO date, YYYY-MM-DD
 }
 
 export const posts: PostMeta[] = [
@@ -32,5 +32,21 @@ export const posts: PostMeta[] = [
   },
 ];
 
+/** Site-relative URL of a post, with the trailing slash the static export uses. */
+export const postPath = (slug: string) => `/blog/${slug}/`;
+
+/** The posts.ts entry for a slug. Throws (failing the build) if a post page has no entry here. */
+export function getPost(slug: string): PostMeta {
+  const post = posts.find((p) => p.slug === slug);
+  if (!post) throw new Error(`Blog post "${slug}" has no entry in content/posts.ts`);
+  return post;
+}
+
+/** "2026-09-17" -> "17 September 2026". Pinned to IST so a UTC build machine doesn't show the day before. */
 export const formatDate = (iso: string) =>
-  new Date(`${iso}T00:00:00+05:30`).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+  new Date(`${iso}T00:00:00+05:30`).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'Asia/Kolkata',
+  });
