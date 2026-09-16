@@ -2,7 +2,7 @@ import { splitAmount } from './split.js';
 import { isValidVpa } from './upi.js';
 import { createPlan, breakdownText } from './plan.js';
 
-const STORAGE_KEY = 'split-pay/plan';
+const STORAGE_KEY = 'tukdapay/plan';
 const $ = (id) => document.getElementById(id);
 
 const els = {
