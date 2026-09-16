@@ -70,6 +70,6 @@ export const useCases: UseCase[] = [
     amount: 3200,
     who: 'Services',
     story: 'The bike service came to ₹3,200 including parts. The mechanic shows his UPI QR on his phone.',
-    tip: 'Scan his QR once to get the UPI ID, then paste it here.',
+    tip: 'Scan his QR once to get the UPI ID, then paste it into the splitter.',
   },
 ];
