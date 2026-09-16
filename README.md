@@ -6,6 +6,8 @@ own UPI app — GPay, PhonePe, Paytm, BHIM, any of them.
 
 Live: https://arunachalamkalimuthu.github.io/tukdapay/
 
+[![test](https://github.com/Arunachalamkalimuthu/tukdapay/actions/workflows/test.yml/badge.svg)](https://github.com/Arunachalamkalimuthu/tukdapay/actions/workflows/test.yml)
+
 Static page. No backend, no account, no tracking. Your money never touches
 this site; it only prepares the `upi://pay` links.
 
