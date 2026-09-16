@@ -11,11 +11,13 @@ export function readJson(key: string): unknown {
   }
 }
 
-export function writeJson(key: string, value: unknown): void {
+/** Save a value (or remove it, for null). Returns false when storage is blocked, full or missing. */
+export function writeJson(key: string, value: unknown): boolean {
   try {
     if (value === null || value === undefined) localStorage.removeItem(key);
     else localStorage.setItem(key, JSON.stringify(value));
+    return true;
   } catch {
-    /* ignore */
+    return false;
   }
 }

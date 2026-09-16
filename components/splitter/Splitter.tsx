@@ -4,9 +4,18 @@ import { flushSync } from 'react-dom';
 import { useSearchParams } from 'next/navigation';
 import { splitAmount } from '@/lib/split';
 import { isValidVpa } from '@/lib/upi';
-import { countParts, createPlan, MAX_PARTS, parsePlan, type Plan } from '@/lib/plan';
-import { amountToInput, formatInputAmount, formatInr, isPositiveAmount, parseAmount, sanitizeAmountInput } from '@/lib/format';
-import { readPrefill, stripPrefill, type ParamSource } from '@/lib/prefill';
+import { countParts, createPlan, MAX_PARTS, parsePlan, shouldKeepPlan, type Plan } from '@/lib/plan';
+import {
+  amountToInput,
+  editAmountInput,
+  formatInputAmount,
+  formatInr,
+  isValidAmount,
+  MAX_AMOUNT,
+  MAX_AMOUNT_TEXT,
+  parseAmount,
+} from '@/lib/format';
+import { MAX_TEXT, readPrefill, stripPrefill, type ParamSource } from '@/lib/prefill';
 import { parseRecent, rememberMerchant, type RecentMerchant } from '@/lib/recent';
 import { readJson, writeJson } from '@/lib/storage';
 import { DEFAULT_MAX } from '@/lib/site';
@@ -80,9 +89,10 @@ export function Splitter() {
 }
 
 /**
- * Reads the URL and storage once per mount. If a different prefill arrives while the page
- * stays mounted (back/forward, or a link to /?amount= from this page), start again from it.
- * Prefill params going away (we strip them after a split) keeps the form as it is.
+ * Reads the URL and storage once per mount. If the prefill changes while the page stays
+ * mounted (back/forward, the logo link, or a link to /?amount= from this page), start again
+ * from the new URL, just as a reload would. The one exception is the form stripping the
+ * prefill itself after a split, which keeps the form and its new plan as they are.
  */
 function LiveSplitter() {
   const params = useSearchParams();
@@ -90,19 +100,47 @@ function LiveSplitter() {
   const prefillKey = prefill.present ? JSON.stringify(prefill) : '';
   const [seenKey, setSeenKey] = useState(prefillKey);
   const [generation, setGeneration] = useState(0);
+  const [stripping, setStripping] = useState(false);
   if (prefillKey !== seenKey) {
     setSeenKey(prefillKey);
-    if (prefillKey) setGeneration((g) => g + 1);
+    if (prefillKey || !stripping) setGeneration((g) => g + 1);
+    setStripping(false);
   }
-  return <LoadedForm key={generation} params={params} />;
+  return <LoadedForm key={generation} params={params} onStripPrefill={() => setStripping(true)} />;
 }
 
-function LoadedForm({ params }: { params: ParamSource }) {
+function LoadedForm({ params, onStripPrefill }: { params: ParamSource; onStripPrefill: () => void }) {
   const [initial] = useState(() => loadInitial(params));
-  return <SplitterForm initial={initial} />;
+  return <SplitterForm initial={initial} onStripPrefill={onStripPrefill} />;
 }
 
-function SplitterForm({ initial, placeholder = false }: { initial: Initial; placeholder?: boolean }) {
+/** Bring the plan into view and move focus to its heading. */
+function revealResult(section: HTMLElement | null, heading: HTMLHeadingElement | null) {
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  section?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+  heading?.focus({ preventScroll: true });
+}
+
+/**
+ * Apply a change to an amount field without letting React's rewrite of the value throw the
+ * caret to the end (say, when a second "." is ignored).
+ */
+function changeAmount(e: React.ChangeEvent<HTMLInputElement>, before: string, set: (value: string) => void) {
+  const el = e.target;
+  const raw = el.value;
+  const { value, caret } = editAmountInput(before, raw, el.selectionStart ?? raw.length);
+  set(value);
+  if (value !== raw) requestAnimationFrame(() => el.setSelectionRange(caret, caret));
+}
+
+interface FormProps {
+  initial: Initial;
+  placeholder?: boolean;
+  /** Called just before the form removes the prefill params from the URL. */
+  onStripPrefill?: () => void;
+}
+
+function SplitterForm({ initial, placeholder = false, onStripPrefill }: FormProps) {
   const [total, setTotal] = useState(initial.total);
   const [pa, setPa] = useState(initial.pa);
   const [pn, setPn] = useState(initial.pn);
@@ -124,28 +162,34 @@ function SplitterForm({ initial, placeholder = false }: { initial: Initial; plac
   useEffect(() => {
     if (!plan || !focusResult.current) return;
     focusResult.current = false;
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    resultRef.current?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
-    headingRef.current?.focus({ preventScroll: true });
+    revealResult(resultRef.current, headingRef.current);
   }, [plan]);
 
   const totalNum = parseAmount(total);
   const maxNum = parseAmount(max);
   const partCount = countParts(totalNum, maxNum);
   const tooManyParts = partCount > MAX_PARTS;
+  const tooLarge = totalNum > MAX_AMOUNT;
   const errors: Record<Field, string | null> = {
-    total: !isPositiveAmount(totalNum)
-      ? 'Enter the amount you need to pay.'
-      : tooManyParts
-        ? `That would be ${partCount.toLocaleString('en-IN')} payments. Use a smaller amount or a higher max per payment to keep it to ${MAX_PARTS} or fewer.`
-        : null,
+    total: tooLarge
+      ? `Enter an amount up to ${MAX_AMOUNT_TEXT}.`
+      : !isValidAmount(totalNum)
+        ? 'Enter the amount you need to pay.'
+        : tooManyParts
+          ? `That would be ${partCount.toLocaleString('en-IN')} payments. Use a smaller amount or a higher max per payment to keep it to ${MAX_PARTS} or fewer.`
+          : null,
     pa: isValidVpa(pa.trim()) ? null : 'Enter the merchant’s UPI ID, like shopname@okaxis.',
-    max: isPositiveAmount(maxNum) ? null : 'Max per payment must be more than ₹0.',
+    max:
+      maxNum > MAX_AMOUNT
+        ? `Max per payment must be ${MAX_AMOUNT_TEXT} or less.`
+        : isValidAmount(maxNum)
+          ? null
+          : 'Max per payment must be more than ₹0.',
   };
   const valid = !errors.total && !errors.pa && !errors.max;
-  // Errors show once a field has been left (or on a split attempt). Too many parts shows
-  // straight away, in place of the live preview it replaces.
-  const shows = (f: Field) => !!errors[f] && (!!touched[f] || (f === 'total' && tooManyParts));
+  // Errors show once a field has been left (or on a split attempt). Too many parts, or an
+  // amount over the cap, shows straight away in place of the live preview it replaces.
+  const shows = (f: Field) => !!errors[f] && (!!touched[f] || (f === 'total' && (tooManyParts || tooLarge)));
   const preview = partCount > 0 && !tooManyParts ? splitAmount(totalNum, maxNum) : null;
 
   const leave = (f: Field) => setTouched((t) => ({ ...t, [f]: true }));
@@ -171,18 +215,27 @@ function SplitterForm({ initial, placeholder = false }: { initial: Initial; plac
     setTotal(formatInputAmount(total));
     setMax(formatInputAmount(max));
     const input = { total: totalNum, pa: pa.trim(), pn: pn.trim(), note: note.trim(), maxPerTxn: maxNum };
-    const next = createPlan(input);
-    focusResult.current = true;
-    setPlan(next);
-    writeJson(PLAN_KEY, next);
+    // Splitting the same payment again (say, tapping Split above a restored plan) keeps its paid ticks.
+    const next = shouldKeepPlan(plan, input) ? plan : createPlan(input);
+    if (next === plan) {
+      revealResult(resultRef.current, headingRef.current);
+    } else {
+      focusResult.current = true;
+      setPlan(next);
+    }
+    const saved = writeJson(PLAN_KEY, next);
     const list = rememberMerchant(recent, { pa: input.pa, pn: input.pn });
     setRecent(list);
     writeJson(RECENT_KEY, list);
 
     // Drop ?amount= and friends so a reload (say, after switching to the UPI app) shows this plan.
+    // If the plan couldn't be saved, a reload can't show it, so keep them to at least refill the form.
     const { pathname, search, hash } = window.location;
     const rest = stripPrefill(search);
-    if (rest !== search) window.history.replaceState(null, '', `${pathname}${rest}${hash}`);
+    if (saved && rest !== search) {
+      onStripPrefill?.();
+      window.history.replaceState(null, '', `${pathname}${rest}${hash}`);
+    }
   }
 
   function togglePaid(index: number, paid: boolean) {
@@ -223,7 +276,7 @@ function SplitterForm({ initial, placeholder = false }: { initial: Initial; plac
               placeholder="0"
               value={total}
               onChange={(e) => {
-                setTotal(sanitizeAmountInput(e.target.value));
+                changeAmount(e, total, setTotal);
                 editing('total');
               }}
               onBlur={() => {
@@ -287,11 +340,25 @@ function SplitterForm({ initial, placeholder = false }: { initial: Initial; plac
         <div className={s.row}>
           <div className={s.field}>
             <label className={s.label} htmlFor="pn">Merchant name <small>optional</small></label>
-            <input id="pn" className={s.input} placeholder="Sri Tea Stall" value={pn} onChange={(e) => setPn(e.target.value)} />
+            <input
+              id="pn"
+              className={s.input}
+              placeholder="Sri Tea Stall"
+              maxLength={MAX_TEXT}
+              value={pn}
+              onChange={(e) => setPn(e.target.value)}
+            />
           </div>
           <div className={s.field}>
             <label className={s.label} htmlFor="note">Note <small>optional</small></label>
-            <input id="note" className={s.input} placeholder="Order 42" value={note} onChange={(e) => setNote(e.target.value)} />
+            <input
+              id="note"
+              className={s.input}
+              placeholder="Order 42"
+              maxLength={MAX_TEXT}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
           </div>
         </div>
 
@@ -309,7 +376,7 @@ function SplitterForm({ initial, placeholder = false }: { initial: Initial; plac
                 autoComplete="off"
                 value={max}
                 onChange={(e) => {
-                  setMax(sanitizeAmountInput(e.target.value));
+                  changeAmount(e, max, setMax);
                   editing('max');
                 }}
                 onBlur={() => {

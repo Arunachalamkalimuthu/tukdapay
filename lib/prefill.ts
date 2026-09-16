@@ -1,9 +1,19 @@
-import { isPositiveAmount, parseAmount } from './format.ts';
+import { isValidAmount, parseAmount } from './format.ts';
 
 /** Query params that prefill the splitter, e.g. /?amount=14999&pa=shop@okaxis */
 export const PREFILL_KEYS = ['amount', 'pa', 'pn', 'note', 'max'] as const;
 
-const MAX_TEXT = 100;
+/** The most characters kept from a prefilled name or note. The form's name and note fields take the same. */
+export const MAX_TEXT = 100;
+
+// Count characters as people see them, so a cut never splits an emoji or an accent from its letter.
+// Browsers without Intl.Segmenter (Firefox before 125) count code points instead.
+const graphemes = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter('en', { granularity: 'grapheme' }) : null;
+
+function clip(value: string, max: number): string {
+  const chars = graphemes ? Array.from(graphemes.segment(value), (g) => g.segment) : Array.from(value);
+  return chars.slice(0, max).join('');
+}
 
 export interface Prefill {
   /** True when at least one usable value was found. */
@@ -22,14 +32,14 @@ export interface ParamSource {
 function text(source: ParamSource, key: string): string | undefined {
   const value = source.get(key)?.trim();
   if (!value) return undefined;
-  return Array.from(value).slice(0, MAX_TEXT).join('').trimEnd();
+  return clip(value, MAX_TEXT).trimEnd();
 }
 
 function amount(source: ParamSource, key: string): number | undefined {
   const raw = source.get(key)?.trim();
   if (!raw) return undefined;
   const n = parseAmount(raw);
-  return isPositiveAmount(n) ? Math.round(n * 100) / 100 : undefined;
+  return isValidAmount(n) ? Math.round(n * 100) / 100 : undefined;
 }
 
 /** Read the prefill from URL search params. Only usable values are returned. */

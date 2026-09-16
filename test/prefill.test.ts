@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readPrefill, stripPrefill, PREFILL_KEYS } from '../lib/prefill.ts';
+import { readPrefill, stripPrefill, PREFILL_KEYS, MAX_TEXT } from '../lib/prefill.ts';
 
 const p = (query: string) => readPrefill(new URLSearchParams(query));
 
@@ -20,6 +20,18 @@ test('amount and max are parsed and kept only when positive', () => {
   assert.deepEqual(p('amount=0.001'), { present: false });
 });
 
+test('amounts written with Rs. in front keep their digits', () => {
+  assert.equal(p('amount=Rs.4999').amount, 4999);
+  assert.equal(p(`amount=${encodeURIComponent('Rs. 4,999/-')}`).amount, 4999);
+  assert.equal(p('max=Rs.1000').max, 1000);
+});
+
+test('amounts over the most the page splits are ignored', () => {
+  assert.deepEqual(p('amount=1000000000000000000000'), { present: false });
+  assert.deepEqual(p(`max=1${'0'.repeat(307)}`), { present: false });
+  assert.equal(p('amount=1000000000').amount, 1000000000);
+});
+
 test('amounts are rounded to paise', () => {
   assert.equal(p('amount=4999.555').amount, 4999.56);
   assert.equal(p('max=0.009').max, 0.01);
@@ -33,6 +45,15 @@ test('text params are trimmed and ignored when empty', () => {
     note: 'Table 4',
   });
   assert.deepEqual(p('pa=%20%20&pn=&note='), { present: false });
+});
+
+test('text params are capped at 100 characters without splitting an emoji', () => {
+  assert.equal(MAX_TEXT, 100);
+  const family = '\u{1F468}‍\u{1F469}‍\u{1F467}';
+  assert.equal(p(`note=${encodeURIComponent('x'.repeat(98) + family + 'y')}`).note, 'x'.repeat(98) + family + 'y');
+  assert.equal(p(`note=${encodeURIComponent('x'.repeat(99) + family + 'y')}`).note, 'x'.repeat(99) + family);
+  assert.equal(p(`pn=${encodeURIComponent('x'.repeat(100) + family)}`).pn, 'x'.repeat(100));
+  assert.equal(p(`note=${encodeURIComponent('x'.repeat(99) + 'é' + 'y')}`).note, 'x'.repeat(99) + 'é');
 });
 
 test('text params are capped at 100 characters', () => {
