@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
-import { buildRssFeed, escapeXml, toRfc822 } from '../lib/rss.ts';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { buildRssFeed, escapeXml, newestFirst, toRfc822 } from '../lib/rss.ts';
 import { posts } from '../content/posts.ts';
 
 const post = (over: Partial<{ slug: string; title: string; description: string; date: string }> = {}) => ({
@@ -94,4 +94,22 @@ test('every post in the feed has an MDX page wired to the same slug', () => {
     assert.ok(src.includes(`postMetadata('${slug}')`), `${slug}: metadata must use postMetadata('${slug}')`);
     assert.ok(src.includes(`postLayout('${slug}')`), `${slug}: default export must be postLayout('${slug}')`);
   }
+});
+
+test('every MDX post page has an entry in content/posts.ts', () => {
+  const blogDir = new URL('../app/blog/', import.meta.url);
+  const pages = readdirSync(blogDir, { withFileTypes: true })
+    .filter((d) => d.isDirectory() && existsSync(new URL(`${d.name}/page.mdx`, blogDir)))
+    .map((d) => d.name);
+  assert.ok(pages.length > 0);
+  for (const slug of pages) {
+    assert.ok(posts.some((p) => p.slug === slug), `app/blog/${slug}/page.mdx has no entry in content/posts.ts`);
+  }
+});
+
+test('content/posts.ts lists posts newest first, as the home page and post footers assume', () => {
+  assert.deepEqual(
+    posts.map((p) => p.slug),
+    newestFirst(posts).map((p) => p.slug)
+  );
 });

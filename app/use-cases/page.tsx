@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { JsonLd } from '@/components/JsonLd';
-import { useCases } from '@/content/useCases';
+import { tryHref, useCases } from '@/content/useCases';
 import { formatInr } from '@/lib/format';
 import { pageMetadata } from '@/lib/metadata';
 import { DEFAULT_MAX, SITE_URL } from '@/lib/site';
@@ -100,13 +100,35 @@ export default function UseCasesPage() {
                 <strong>Tip:</strong> {u.tip}
               </p>
 
-              <Link className={`btn btn-primary ${s.action}`} href={`/?amount=${u.amount}`}>
+              <Link className={`btn btn-primary ${s.action}`} href={tryHref(u)}>
                 {`Try with ${rupees(u.amount)}`}
               </Link>
             </article>
           );
         })}
       </div>
+
+      <section className={`section ${s.merchants}`} aria-labelledby="merchants-title">
+        <h2 id="merchants-title">If you’re the merchant</h2>
+        <ul>
+          <li>
+            <strong>Say yes or no up front.</strong> A sign at the counter (“Split UPI payments welcome” or “One
+            payment per bill”) saves a conversation.
+          </li>
+          <li>
+            <strong>Look for the part numbers.</strong> TukdaPay tags every payment <em>Part 1/3</em>,{' '}
+            <em>Part 2/3</em>… in the note, so matching them to one bill is a glance.
+          </li>
+          <li>
+            <strong>Ask for the breakdown.</strong> Customers can send the list on WhatsApp in one tap; keep it with
+            the bill.
+          </li>
+          <li>
+            <strong>Check what applies to you.</strong> If a payment carries a charge, it may fall on you rather than
+            the customer. <Link href="/blog/upi-2000-threshold-what-to-check/">Here’s how to check</Link>.
+          </li>
+        </ul>
+      </section>
 
       <section className={`section ${s.cta}`} aria-labelledby="own-bill-title">
         <h2 id="own-bill-title">Your bill isn’t on the list?</h2>

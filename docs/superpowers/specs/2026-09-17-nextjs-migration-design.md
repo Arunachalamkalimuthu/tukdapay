@@ -10,7 +10,7 @@ GitHub Pages via GitHub Actions on tukdapay.com.
 
 ## Stack
 
-- Next.js 15, App Router, TypeScript, `output: 'export'`, `trailingSlash: true`
+- Next.js 16, App Router, TypeScript, `output: 'export'`, `trailingSlash: true`
 - Global CSS with existing tokens + CSS Modules per component. No Tailwind.
 - Blog posts as `app/blog/<slug>/page.mdx` via `@next/mdx`; each exports
   `metadata`. Post list is driven by `content/posts.ts` (slug, title,

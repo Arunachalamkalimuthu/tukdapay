@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Bricolage_Grotesque } from 'next/font/google';
 import { SITE_NAME, SITE_URL } from '@/lib/site';
-import { FEED_URL, OG_IMAGE } from '@/lib/metadata';
+import { FEED_ALTERNATE, OG_IMAGE } from '@/lib/metadata';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import './globals.css';
@@ -22,8 +22,7 @@ export const metadata: Metadata = {
   description:
     'Free UPI payment splitter. Break a bill over ₹2000 into payments of ₹1999 or less and pay each one from GPay, PhonePe, Paytm or any UPI app. No signup, no backend.',
   applicationName: SITE_NAME,
-  keywords: ['UPI split payment', 'UPI 2000 limit', 'split UPI transaction', 'GPay split payment', 'PhonePe split payment', 'UPI payment splitter'],
-  alternates: { canonical: '/', types: { 'application/rss+xml': FEED_URL } },
+  alternates: { canonical: '/', types: FEED_ALTERNATE },
   openGraph: {
     type: 'website',
     siteName: SITE_NAME,
