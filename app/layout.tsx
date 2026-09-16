@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     images: [OG_IMAGE],
   },
   twitter: { card: 'summary_large_image' },
-  icons: { icon: '/favicon.svg' },
+  icons: { icon: '/favicon.svg', apple: { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' } },
   manifest: '/manifest.webmanifest',
   robots: { index: true, follow: true },
 };

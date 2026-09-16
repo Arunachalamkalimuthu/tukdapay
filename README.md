@@ -122,11 +122,22 @@ mdx-components.tsx         required by @next/mdx
 
 ## Writing a blog post
 
-1. Create `app/blog/<slug>/page.mdx`. Copy an existing post for the
-   `metadata` export and structure.
-2. Add `{ slug, title, description, date }` to `content/posts.ts`, newest
+1. Add `{ slug, title, description, date }` to `content/posts.ts`, newest
    first. That list drives the blog index, the home page, the RSS feed and
-   the sitemap.
+   the sitemap, and supplies the post's title and date.
+2. Create `app/blog/<slug>/page.mdx`, starting with:
+
+   ```mdx
+   import { postLayout, postMetadata } from '@/components/blog/PostShell'
+
+   export const metadata = postMetadata('<slug>')
+
+   export default postLayout('<slug>')
+   ```
+
+   then write the post in Markdown. `<Lede>`, `<Callout>` and `<Cta href>`
+   are available without importing. The build fails if the slug is missing
+   from `content/posts.ts`.
 
 ## Adding a use case
 
