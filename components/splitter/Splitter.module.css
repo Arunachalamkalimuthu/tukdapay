@@ -46,9 +46,6 @@
 .advanced summary { cursor: pointer; color: var(--muted); font-weight: 500; }
 .advanced[open] summary { margin-bottom: 8px; }
 
-/* Looks disabled until the form is valid, but stays focusable (see Splitter.tsx). */
-.submit[aria-disabled='true'] { opacity: 0.5; cursor: not-allowed; }
-
 .srOnly {
   position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
   overflow: hidden; clip-path: inset(50%); white-space: nowrap;

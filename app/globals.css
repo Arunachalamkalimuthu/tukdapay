@@ -1,81 +1,239 @@
+/* ===== Colour tokens =====
+ * Three blocks, kept in sync: light (:root), dark by system preference, and dark by [data-theme].
+ * Pairs and ratios are checked by a script; see the UI foundation commit for the table.
+ */
 :root {
-  --paper: #f0edf5;
+  --paper: #f1eef6;
   --surface: #ffffff;
-  --ink: #201c33;
-  --muted: #6e6a80;
-  --line: #d8d3e4;
+  --ink: #1e1930;
+  --muted: #5f5a73;
+  --placeholder: var(--muted);
+  /* Dividers only (decorative). Input, checkbox and hollow-piece boundaries use --field. */
+  --line: #ddd7e8;
+  --field: #8a839f;
   --accent: #a8256b;
+  --accent-hover: #8e1f5a;
   --accent-ink: #ffffff;
-  --paid: #2e7d5b;
-  --paid-wash: #e4f2ea;
+  --accent-wash: #f8e8f0;
+  --focus: #a8256b;
+  --paid: #22704d;
+  --paid-ink: #ffffff;
+  --paid-wash: #e1f1e7;
   --error: #b3261e;
-  --radius: 10px;
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --paper: #171422;
-    --surface: #221d31;
-    --ink: #eee9f6;
-    --muted: #a49fb8;
-    --line: #3a334d;
-    --accent: #e0559a;
-    --accent-ink: #1a0a12;
+    --paper: #15121e;
+    --surface: #201b2d;
+    --ink: #efeaf7;
+    --muted: #aaa4be;
+    --placeholder: #948ea8;
+    --line: #352e47;
+    --field: #7d7594;
+    --accent: #e25a9d;
+    --accent-hover: #ee7cb4;
+    --accent-ink: #1b0a13;
+    --accent-wash: #33172a;
+    --focus: #f07cb4;
     --paid: #6fcf9a;
-    --paid-wash: #1e3328;
+    --paid-ink: #0e2419;
+    --paid-wash: #1b3126;
     --error: #ff8a80;
   }
 }
 :root[data-theme='dark'] {
-  --paper: #171422;
-  --surface: #221d31;
-  --ink: #eee9f6;
-  --muted: #a49fb8;
-  --line: #3a334d;
-  --accent: #e0559a;
-  --accent-ink: #1a0a12;
+  --paper: #15121e;
+  --surface: #201b2d;
+  --ink: #efeaf7;
+  --muted: #aaa4be;
+  --placeholder: #948ea8;
+  --line: #352e47;
+  --field: #7d7594;
+  --accent: #e25a9d;
+  --accent-hover: #ee7cb4;
+  --accent-ink: #1b0a13;
+  --accent-wash: #33172a;
+  --focus: #f07cb4;
   --paid: #6fcf9a;
-  --paid-wash: #1e3328;
+  --paid-ink: #0e2419;
+  --paid-wash: #1b3126;
   --error: #ff8a80;
+  color-scheme: dark;
+}
+:root[data-theme='light'] { color-scheme: light; }
+
+/* ===== Shape, type, space and motion tokens (the same in both themes) ===== */
+:root {
+  --radius: 12px;
+  --radius-lg: 18px;
+  --radius-sm: 4px;
+
+  --focus-ring: 3px solid var(--focus);
+  --focus-offset: 2px;
+
+  /* Money is set condensed and tabular; words are not. */
+  --money-width: 84%;
+
+  /* Type scale (px). Weights: display 800, title 780, heading 720, money 720, button 650, label 600. */
+  --text-amount: 56px;
+  --text-display: 36px;
+  --text-title: 30px;
+  --text-heading: 24px;
+  --text-money: 26px;
+  --text-lede: 20px;
+  --text-body: 17px;
+  --text-label: 15px;
+  --text-small: 15px;
+  --text-tick: 14px;
+
+  --measure: 62ch;
+  --measure-narrow: 46ch;
+
+  /* Spacing steps: 4 8 12 16 24 32 48 72. */
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-48: 48px;
+  --space-72: 72px;
+  --section-gap: 72px;
+
+  --duration-feedback: 160ms;
+  --duration-cut: 320ms;
+  --ease-cut: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+@media (min-width: 960px) {
+  :root {
+    --text-display: 48px;
+    --text-title: 40px;
+    --text-heading: 26px;
+    --text-money: 28px;
+    --text-lede: 21px;
+    --section-gap: 96px;
+  }
 }
 
+/* ===== Page width =====
+ * One left edge: the header, the page and the footer all size to --container.
+ * Pages are 640px wide by default (use cases, blog, 404). The home page opts in to its own
+ * widths by putting the `page-home` class on its `.page` element.
+ */
+body {
+  --container: 640px;
+  --gutter: 16px;
+}
+body:has(.page-home) { --container: 440px; }
+@media (min-width: 700px) {
+  body:has(.page-home) { --container: 640px; }
+}
+@media (min-width: 960px) {
+  body { --gutter: 24px; }
+  body:has(.page-home) { --container: 1120px; }
+}
+
+/* ===== Base ===== */
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-sans), system-ui, sans-serif;
-  font-size: 17px;
-  line-height: 1.45;
+  font-size: var(--text-body);
+  line-height: 1.55;
   font-variant-numeric: tabular-nums;
 }
-a { color: var(--accent); }
-:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
+a { color: var(--accent); text-underline-offset: 3px; text-decoration-thickness: 1.5px; }
+:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+::placeholder { color: var(--placeholder); opacity: 1; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9em; }
+h1, h2, h3 { letter-spacing: -0.02em; line-height: 1.15; margin: 0; text-wrap: balance; }
 
-.page { max-width: 480px; margin: 0 auto; padding: 28px 16px 64px; }
-.page.wide { max-width: 640px; }
+.page {
+  max-width: calc(var(--container) + 2 * var(--gutter));
+  margin-inline: auto;
+  padding: 28px var(--gutter) var(--space-72);
+}
+/* `.page.wide` is the default width now; the class is kept so existing markup still works. */
 
-h1, h2, h3 { letter-spacing: -0.02em; line-height: 1.1; margin: 0; }
+/* ===== Type utilities ===== */
+.money { font-stretch: var(--money-width); font-variant-numeric: tabular-nums; }
+.t-display { font-size: var(--text-display); font-weight: 800; letter-spacing: -0.03em; line-height: 1.02; text-wrap: balance; }
+.t-title { font-size: var(--text-title); font-weight: 780; letter-spacing: -0.025em; line-height: 1.08; text-wrap: balance; }
+.t-heading { font-size: var(--text-heading); font-weight: 720; letter-spacing: -0.02em; line-height: 1.15; }
+.t-money { font-size: var(--text-money); font-weight: 720; letter-spacing: -0.01em; line-height: 1.05; font-stretch: var(--money-width); font-variant-numeric: tabular-nums; }
+.t-lede { font-size: var(--text-lede); line-height: 1.4; }
+.t-label { font-size: var(--text-label); font-weight: 600; line-height: 1.3; }
+.t-small { font-size: var(--text-small); line-height: 1.45; }
+.t-tick { font-size: var(--text-tick); font-weight: 600; letter-spacing: 0.01em; line-height: 1.2; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+
+/* Kept from the first port; pages still use them until they are restyled. */
 .section { margin-top: 56px; border-top: 1.5px solid var(--line); padding-top: 28px; }
 .section h2 { font-size: 22px; font-weight: 800; margin-bottom: 14px; }
 .muted { color: var(--muted); }
 .prose p, .prose li { max-width: 60ch; }
 
+/* ===== Buttons ===== */
 .btn {
-  font: inherit; font-weight: 700; border-radius: var(--radius);
-  padding: 13px 18px; cursor: pointer; border: 1.5px solid transparent;
-  text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font: inherit; font-size: 17px; font-weight: 650; line-height: 1.2; text-align: center;
+  min-height: 48px; padding: 8px 20px; border-radius: var(--radius); border: 1.5px solid transparent;
+  display: inline-flex; align-items: center; justify-content: center; gap: 12px;
+  text-decoration: none; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
-.btn-primary { background: var(--accent); color: var(--accent-ink); }
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-secondary { background: var(--surface); color: var(--ink); border-color: var(--line); }
-.btn-tertiary { background: transparent; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) {
+  .btn { transition: background-color var(--duration-feedback) ease, border-color var(--duration-feedback) ease, color var(--duration-feedback) ease; }
+}
+.btn-lg { min-height: 56px; padding-inline: 24px; }
 
-.skip { position: absolute; left: -999px; top: 8px; background: var(--accent); color: var(--accent-ink); padding: 8px 12px; border-radius: 8px; z-index: 10; }
-.skip:focus { left: 16px; }
+/* The one solid magenta action on a screen. */
+.btn-primary { background: var(--accent); color: var(--accent-ink); }
+.btn-primary:hover { background: var(--accent-hover); }
+
+.btn-secondary { background: var(--surface); color: var(--ink); border-color: var(--field); }
+.btn-secondary:hover { border-color: var(--ink); }
+
+/* A magenta action that isn't the main one (row Pay buttons, "Try with ₹4,200"). */
+.btn-outline { background: transparent; color: var(--accent); border-color: var(--accent); }
+.btn-outline:hover { background: var(--accent-wash); }
+
+/* Reads as a link; still a 44px target. */
+.btn-tertiary {
+  background: transparent; color: var(--muted); border: 0; min-height: 44px; min-width: 44px; padding-inline: 0;
+  font-weight: 600; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px;
+}
+.btn-tertiary:hover { color: var(--ink); }
+
+/* Not ready yet: stays focusable and readable (and explains on press), but isn't a solid action. Never opacity. */
+.btn-primary[aria-disabled='true'],
+.btn-primary:disabled {
+  background: transparent; color: var(--muted); border: 1.5px dashed var(--field); cursor: not-allowed;
+}
+
+/* ===== Skip link ===== */
+.skip {
+  position: absolute; left: -999px; top: 8px; z-index: 10;
+  background: var(--accent); color: var(--accent-ink); font-weight: 650;
+  padding: 10px 14px; border-radius: var(--radius); text-decoration: none;
+}
+.skip:focus { left: var(--gutter); }
+
+/* ===== Forced colours ===== */
+@media (forced-colors: active) {
+  :focus-visible { outline-color: Highlight; }
+  .btn { border-color: ButtonText; }
+  .btn-tertiary { border: 0; }
+  .btn-primary[aria-disabled='true'],
+  .btn-primary:disabled { color: GrayText; border-color: GrayText; }
+}
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { transition: none !important; animation: none !important; }
+  *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }

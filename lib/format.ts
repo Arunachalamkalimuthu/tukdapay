@@ -3,6 +3,9 @@ const grouped = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
 
 export const formatInr = (n: number) => `₹${inr.format(n)}`;
 
+/** A figure as the strip and the use cases show it: 1999 -> "₹1,999", 4999.5 -> "₹4,999.50". */
+export const formatRupees = (n: number) => formatInr(n).replace(/\.00$/, '');
+
 /** The largest amount the splitter takes (₹100 crore). Far beyond any real split, well within exact paise. */
 export const MAX_AMOUNT = 1_00_00_00_000;
 export const MAX_AMOUNT_TEXT = '₹100 crore';

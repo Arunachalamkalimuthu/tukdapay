@@ -6,9 +6,11 @@ import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import './globals.css';
 
+// Variable weight plus the width axis: money is set condensed (see .money in globals.css).
+// latin-ext carries the ₹ sign, so both subsets are preloaded. No opsz axis: it would add ~70KB.
 const sans = Bricolage_Grotesque({
-  subsets: ['latin'],
-  weight: ['400', '500', '700', '800'],
+  subsets: ['latin', 'latin-ext'],
+  axes: ['wdth'],
   variable: '--font-sans',
   display: 'swap',
 });
@@ -38,7 +40,14 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-export const viewport: Viewport = { themeColor: '#a8256b' };
+// The browser bar matches the page's paper colour in each theme.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f1eef6' },
+    { media: '(prefers-color-scheme: dark)', color: '#15121e' },
+  ],
+  colorScheme: 'light dark',
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

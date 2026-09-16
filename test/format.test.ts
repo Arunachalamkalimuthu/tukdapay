@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   formatInr,
+  formatRupees,
   parseAmount,
   formatInputAmount,
   sanitizeAmountInput,
@@ -15,6 +16,14 @@ test('formatInr uses Indian grouping and two decimals', () => {
   assert.equal(formatInr(1999), '₹1,999.00');
   assert.equal(formatInr(100000), '₹1,00,000.00');
   assert.equal(formatInr(2.1), '₹2.10');
+});
+
+test('formatRupees drops .00 but keeps paise when there are any', () => {
+  assert.equal(formatRupees(1999), '₹1,999');
+  assert.equal(formatRupees(4999.5), '₹4,999.50');
+  assert.equal(formatRupees(100000), '₹1,00,000');
+  assert.equal(formatRupees(2), '₹2');
+  assert.equal(formatRupees(0.05), '₹0.05');
 });
 
 test('parseAmount strips currency, commas and spaces', () => {
