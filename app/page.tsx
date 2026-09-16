@@ -1,11 +1,27 @@
 import { Suspense } from 'react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Splitter } from '@/components/splitter/Splitter';
 import { JsonLd } from '@/components/JsonLd';
-import { posts } from '@/content/posts';
+import { postPath, posts } from '@/content/posts';
 import { faq } from '@/content/faq';
 import { REPO_URL, SITE_URL } from '@/lib/site';
 import s from './page.module.css';
+
+// Title, description and Open Graph come from the root layout. Keywords are for the home page only;
+// they keep ₹2000 ungrouped because that's how people search for it.
+export const metadata: Metadata = {
+  keywords: [
+    'UPI split payment',
+    'UPI 2000 limit',
+    'split UPI transaction',
+    'UPI ₹2000 rule',
+    'pay in parts UPI',
+    'GPay split payment',
+    'PhonePe split payment',
+    'UPI payment splitter',
+  ],
+};
 
 export default function HomePage() {
   return (
@@ -35,12 +51,12 @@ export default function HomePage() {
       />
 
       <section className={s.hero}>
-        <h1>Bill above ₹2000?<br />Pay it in tukde.</h1>
+        <h1>Bill above ₹2,000?<br />Pay it in tukde.</h1>
         <p>
-          Split one UPI payment into parts of ₹1999 or less and pay each from GPay, PhonePe, Paytm or any UPI app.
+          Split one UPI payment into parts of ₹1,999 or less and pay each from GPay, PhonePe, Paytm or any UPI app.
           Free, no signup, nothing leaves your phone.
         </p>
-        <p className={s.example} aria-label="Example: 5000 rupees becomes 1999 plus 1999 plus 1002">
+        <p className={s.example} role="img" aria-label="Example: 5000 rupees becomes 1999 plus 1999 plus 1002">
           <span className={s.exTotal}>₹5,000</span>
           <span className={s.exOp} aria-hidden="true">→</span>
           <span className={s.exPart}>₹1,999</span><span className={s.exOp} aria-hidden="true">+</span>
@@ -78,7 +94,7 @@ export default function HomePage() {
           {faq.map((f) => (
             <div key={f.q}>
               <dt>{f.q}</dt>
-              <dd>{f.a}</dd>
+              <dd>{f.body ?? f.a}</dd>
             </div>
           ))}
         </dl>
@@ -89,7 +105,7 @@ export default function HomePage() {
         <ul className={s.posts}>
           {posts.slice(0, 3).map((p) => (
             <li key={p.slug}>
-              <Link href={`/blog/${p.slug}/`}>{p.title}</Link>
+              <Link href={postPath(p.slug)}>{p.title}</Link>
               <span>{p.description}</span>
             </li>
           ))}

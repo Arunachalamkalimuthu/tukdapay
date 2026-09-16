@@ -43,6 +43,10 @@
 
 .action { width: 100%; }
 
+.merchants ul { margin: 0; padding-left: 20px; color: var(--muted); max-width: 60ch; }
+.merchants li { margin: 0 0 8px; }
+.merchants strong { color: var(--ink); }
+
 .cta p { margin: 0 0 18px; color: var(--muted); max-width: 52ch; }
 
 .srOnly {

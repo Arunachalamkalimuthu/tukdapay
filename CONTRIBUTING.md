@@ -35,6 +35,8 @@ blog post and adding a use case.
 - Copy is plain, sentence case, from the user's point of view, in Indian
   English, with amounts grouped the Indian way (₹1,00,000). Never claim what the current UPI fee or
   limit rule is.
+- Page titles, meta descriptions, Open Graph text and keywords may write ₹2000
+  and ₹1999 without the comma, because that's how people search for them.
 - Test on a real phone before submitting UI changes — the `upi://` handoff
   only works there. Check light and dark mode, and a 360px-wide screen.
 

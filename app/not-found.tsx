@@ -5,10 +5,14 @@ import s from './not-found.module.css';
 export const metadata: Metadata = {
   title: 'Page not found',
   description: 'This page doesn’t exist on TukdaPay. Split a UPI payment, see use cases or read the blog instead.',
-  robots: { index: false },
+  // Next adds <meta name="robots" content="noindex"> to 404 pages itself; null only drops the
+  // layout's "index, follow" so the two don't contradict each other.
+  robots: null,
   // Don't inherit the home page's canonical and og:url: this page is served for every unknown path.
   alternates: { canonical: null },
   openGraph: null,
+  // Nobody shares a 404, and the layout's large-image card has no image here.
+  twitter: null,
 };
 
 export default function NotFound() {

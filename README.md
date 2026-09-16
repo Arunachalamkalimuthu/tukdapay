@@ -102,7 +102,7 @@ components/
 content/
   posts.ts                 blog post list
   useCases.ts              use case scenarios
-  faq.ts                   home page questions
+  faq.tsx                  home page questions
 lib/                       pure logic, no React
   split.ts                 splitAmount(total, maxPerTxn)
   upi.ts                   buildUpiUrl({ pa, pn, am, tn }), isValidVpa()
@@ -142,7 +142,8 @@ mdx-components.tsx         required by @next/mdx
 ## Adding a use case
 
 Add an entry to `content/useCases.ts`. The use cases page renders it with a
-"Try with ₹X" link that opens the splitter with the amount filled in.
+"Try with ₹X" link that opens the splitter with the amount filled in, and the
+entry's short `note` too if it has one.
 
 ## Deployment
 

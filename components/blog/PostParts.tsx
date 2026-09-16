@@ -13,10 +13,13 @@ export function CodeBlock(props: ComponentPropsWithoutRef<'pre'>) {
   return <pre tabIndex={0} {...props} />;
 }
 
-/** Markdown tables, wrapped so wide ones scroll inside the post instead of the page. */
+/**
+ * Markdown tables, wrapped so wide ones scroll inside the post instead of the page.
+ * Like CodeBlock, the wrapper takes focus so keyboard users can scroll it (Safari won't on its own).
+ */
 export function ScrollTable(props: ComponentPropsWithoutRef<'table'>) {
   return (
-    <div className={s.tableScroll}>
+    <div className={s.tableScroll} tabIndex={0} role="region" aria-label="Scrollable table">
       <table {...props} />
     </div>
   );
