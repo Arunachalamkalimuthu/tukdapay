@@ -1,79 +1,175 @@
 'use client';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { flushSync } from 'react-dom';
 import { useSearchParams } from 'next/navigation';
 import { splitAmount } from '@/lib/split';
 import { isValidVpa } from '@/lib/upi';
-import { createPlan, breakdownText, type Plan } from '@/lib/plan';
-import { formatInr, formatInputAmount, parseAmount } from '@/lib/format';
+import { countParts, createPlan, MAX_PARTS, parsePlan, type Plan } from '@/lib/plan';
+import { amountToInput, formatInputAmount, formatInr, isPositiveAmount, parseAmount, sanitizeAmountInput } from '@/lib/format';
+import { readPrefill, stripPrefill, type ParamSource } from '@/lib/prefill';
+import { parseRecent, rememberMerchant, type RecentMerchant } from '@/lib/recent';
 import { readJson, writeJson } from '@/lib/storage';
-import { DEFAULT_MAX, SITE_URL } from '@/lib/site';
-import { QrCode } from './QrCode';
+import { DEFAULT_MAX } from '@/lib/site';
+import { PlanResult } from './PlanResult';
 import s from './Splitter.module.css';
 
 const PLAN_KEY = 'tukdapay/plan';
 const RECENT_KEY = 'tukdapay/recent';
-type Recent = { pa: string; pn: string };
 
-function rememberMerchant(list: Recent[], m: Recent): Recent[] {
-  return [m, ...list.filter((r) => r.pa !== m.pa)].slice(0, 5);
+type Field = 'total' | 'pa' | 'max';
+type Touched = Partial<Record<Field, boolean>>;
+
+interface Initial {
+  total: string;
+  pa: string;
+  pn: string;
+  note: string;
+  max: string;
+  touched: Touched;
+  plan: Plan | null;
+  recent: RecentMerchant[];
 }
 
+const EMPTY: Initial = { total: '', pa: '', pn: '', note: '', max: amountToInput(DEFAULT_MAX), touched: {}, plan: null, recent: [] };
+
+/**
+ * Browser only. A URL prefill (?amount=&pa=&pn=&note=&max=) starts a fresh form and
+ * leaves the saved plan in storage untouched; without one, the saved plan comes back.
+ */
+function loadInitial(params: ParamSource): Initial {
+  const recent = parseRecent(readJson(RECENT_KEY));
+  const prefill = readPrefill(params);
+  if (prefill.present) {
+    return {
+      ...EMPTY,
+      recent,
+      total: prefill.amount === undefined ? '' : amountToInput(prefill.amount),
+      pa: prefill.pa ?? '',
+      pn: prefill.pn ?? '',
+      note: prefill.note ?? '',
+      max: amountToInput(prefill.max ?? DEFAULT_MAX),
+      // Point out a bad prefilled value (say, a mistyped UPI ID) straight away.
+      touched: { total: prefill.amount !== undefined, pa: prefill.pa !== undefined, max: prefill.max !== undefined },
+    };
+  }
+  const plan = parsePlan(readJson(PLAN_KEY));
+  if (!plan) return { ...EMPTY, recent };
+  const { input } = plan;
+  return {
+    ...EMPTY,
+    recent,
+    plan,
+    total: amountToInput(input.total),
+    pa: input.pa,
+    pn: input.pn,
+    note: input.note,
+    max: amountToInput(input.maxPerTxn),
+  };
+}
+
+const subscribeNothing = () => () => {};
+
+/**
+ * The form depends on localStorage and the URL, which only exist in the browser.
+ * Until the page has hydrated, render the empty form as an inert placeholder (so the
+ * static HTML has the right shape), then swap in the live form, which reads both once.
+ */
 export function Splitter() {
+  const hydrated = useSyncExternalStore(subscribeNothing, () => true, () => false);
+  return hydrated ? <LiveSplitter /> : <SplitterForm initial={EMPTY} placeholder />;
+}
+
+/**
+ * Reads the URL and storage once per mount. If a different prefill arrives while the page
+ * stays mounted (back/forward, or a link to /?amount= from this page), start again from it.
+ * Prefill params going away (we strip them after a split) keeps the form as it is.
+ */
+function LiveSplitter() {
   const params = useSearchParams();
-  const [total, setTotal] = useState('');
-  const [pa, setPa] = useState('');
-  const [pn, setPn] = useState('');
-  const [note, setNote] = useState('');
-  const [max, setMax] = useState(String(DEFAULT_MAX));
-  const [touched, setTouched] = useState<{ total?: boolean; pa?: boolean }>({});
-  const [plan, setPlan] = useState<Plan | null>(null);
-  const [recent, setRecent] = useState<Recent[]>([]);
-  const [copied, setCopied] = useState<string | null>(null);
+  const prefill = readPrefill(params);
+  const prefillKey = prefill.present ? JSON.stringify(prefill) : '';
+  const [seenKey, setSeenKey] = useState(prefillKey);
+  const [generation, setGeneration] = useState(0);
+  if (prefillKey !== seenKey) {
+    setSeenKey(prefillKey);
+    if (prefillKey) setGeneration((g) => g + 1);
+  }
+  return <LoadedForm key={generation} params={params} />;
+}
+
+function LoadedForm({ params }: { params: ParamSource }) {
+  const [initial] = useState(() => loadInitial(params));
+  return <SplitterForm initial={initial} />;
+}
+
+function SplitterForm({ initial, placeholder = false }: { initial: Initial; placeholder?: boolean }) {
+  const [total, setTotal] = useState(initial.total);
+  const [pa, setPa] = useState(initial.pa);
+  const [pn, setPn] = useState(initial.pn);
+  const [note, setNote] = useState(initial.note);
+  const [max, setMax] = useState(initial.max);
+  const [touched, setTouched] = useState<Touched>(initial.touched);
+  const [plan, setPlan] = useState<Plan | null>(initial.plan);
+  const [recent, setRecent] = useState(initial.recent);
+  const [advancedOpen, setAdvancedOpen] = useState(() => parseAmount(initial.max) !== DEFAULT_MAX);
+
+  const totalRef = useRef<HTMLInputElement>(null);
+  const paRef = useRef<HTMLInputElement>(null);
+  const maxRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const focusResult = useRef(false);
 
-  // Restore saved plan / recent merchants, then apply URL prefill on top.
+  // After a split: bring the result into view and move focus to its heading.
   useEffect(() => {
-    const saved = readJson<Plan>(PLAN_KEY);
-    if (saved?.parts?.length) {
-      setPlan(saved);
-      setTotal(formatInputAmount(String(saved.input.total)));
-      setPa(saved.input.pa);
-      setPn(saved.input.pn ?? '');
-      setNote(saved.input.note ?? '');
-      setMax(String(saved.input.maxPerTxn));
-    }
-    setRecent(readJson<Recent[]>(RECENT_KEY) ?? []);
-
-    const q = (k: string) => params.get(k)?.trim() ?? '';
-    if (q('amount')) setTotal(formatInputAmount(q('amount')));
-    if (q('pa')) setPa(q('pa'));
-    if (q('pn')) setPn(q('pn'));
-    if (q('note')) setNote(q('note'));
-    if (q('max')) setMax(q('max'));
-  }, [params]);
-
-  useEffect(() => {
-    if (plan && focusResult.current) {
-      focusResult.current = false;
-      resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      resultRef.current?.querySelector('h2')?.focus();
-    }
+    if (!plan || !focusResult.current) return;
+    focusResult.current = false;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    resultRef.current?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+    headingRef.current?.focus({ preventScroll: true });
   }, [plan]);
 
   const totalNum = parseAmount(total);
   const maxNum = parseAmount(max);
-  const totalError = !Number.isFinite(totalNum) || totalNum <= 0 ? 'Enter the amount you need to pay.' : null;
-  const maxError = !Number.isFinite(maxNum) || maxNum <= 0 ? 'Max per payment must be more than ₹0.' : null;
-  const paError = !isValidVpa(pa.trim()) ? 'Enter the merchant’s UPI ID, like shopname@okaxis.' : null;
-  const valid = !totalError && !maxError && !paError;
+  const partCount = countParts(totalNum, maxNum);
+  const tooManyParts = partCount > MAX_PARTS;
+  const errors: Record<Field, string | null> = {
+    total: !isPositiveAmount(totalNum)
+      ? 'Enter the amount you need to pay.'
+      : tooManyParts
+        ? `That would be ${partCount.toLocaleString('en-IN')} payments. Use a smaller amount or a higher max per payment to keep it to ${MAX_PARTS} or fewer.`
+        : null,
+    pa: isValidVpa(pa.trim()) ? null : 'Enter the merchant’s UPI ID, like shopname@okaxis.',
+    max: isPositiveAmount(maxNum) ? null : 'Max per payment must be more than ₹0.',
+  };
+  const valid = !errors.total && !errors.pa && !errors.max;
+  // Errors show once a field has been left (or on a split attempt). Too many parts shows
+  // straight away, in place of the live preview it replaces.
+  const shows = (f: Field) => !!errors[f] && (!!touched[f] || (f === 'total' && tooManyParts));
+  const preview = partCount > 0 && !tooManyParts ? splitAmount(totalNum, maxNum) : null;
 
-  const preview = useMemo(() => (!totalError && !maxError ? splitAmount(totalNum, maxNum) : null), [totalNum, maxNum, totalError, maxError]);
+  const leave = (f: Field) => setTouched((t) => ({ ...t, [f]: true }));
+  // Once a field is fine, editing it again hides its error until it is left again.
+  const editing = (f: Field) => {
+    if (!errors[f]) setTouched((t) => ({ ...t, [f]: false }));
+  };
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    setTouched({ total: true, pa: true });
-    if (!valid) return;
+    if (placeholder) return;
+    const firstInvalid = (['total', 'pa', 'max'] as const).find((f) => errors[f]);
+    if (firstInvalid) {
+      flushSync(() => {
+        setTouched({ total: true, pa: true, max: true });
+        if (errors.max) setAdvancedOpen(true);
+      });
+      const inputs = { total: totalRef, pa: paRef, max: maxRef };
+      inputs[firstInvalid].current?.focus();
+      return;
+    }
+
+    setTotal(formatInputAmount(total));
+    setMax(formatInputAmount(max));
     const input = { total: totalNum, pa: pa.trim(), pn: pn.trim(), note: note.trim(), maxPerTxn: maxNum };
     const next = createPlan(input);
     focusResult.current = true;
@@ -82,69 +178,67 @@ export function Splitter() {
     const list = rememberMerchant(recent, { pa: input.pa, pn: input.pn });
     setRecent(list);
     writeJson(RECENT_KEY, list);
+
+    // Drop ?amount= and friends so a reload (say, after switching to the UPI app) shows this plan.
+    const { pathname, search, hash } = window.location;
+    const rest = stripPrefill(search);
+    if (rest !== search) window.history.replaceState(null, '', `${pathname}${rest}${hash}`);
   }
 
-  function togglePaid(i: number, paid: boolean) {
+  function togglePaid(index: number, paid: boolean) {
     if (!plan) return;
-    const next = { ...plan, parts: plan.parts.map((p) => (p.index === i ? { ...p, paid } : p)) };
+    const next = { ...plan, parts: plan.parts.map((p) => (p.index === index ? { ...p, paid } : p)) };
     setPlan(next);
     writeJson(PLAN_KEY, next);
   }
 
-  function reset() {
+  function startOver() {
     setPlan(null);
     writeJson(PLAN_KEY, null);
-    setTotal(''); setPa(''); setPn(''); setNote(''); setMax(String(DEFAULT_MAX));
+    setTotal('');
+    setPa('');
+    setPn('');
+    setNote('');
+    setMax(amountToInput(DEFAULT_MAX));
     setTouched({});
-    document.getElementById('total')?.focus();
+    setAdvancedOpen(false);
+    totalRef.current?.focus();
   }
 
-  async function copy() {
-    if (!plan) return;
-    try {
-      await navigator.clipboard.writeText(breakdownText(plan));
-      setCopied('Copied');
-    } catch {
-      setCopied('Copy failed');
-    }
-    setTimeout(() => setCopied(null), 1500);
-  }
-
-  const paidCount = plan?.parts.filter((p) => p.paid).length ?? 0;
-  const nextPart = plan?.parts.find((p) => !p.paid) ?? null;
-  const waText = plan ? `${breakdownText(plan)}\n\nMade with ${SITE_URL}` : '';
+  const submitHint = [errors.total, errors.pa, errors.max].filter(Boolean).join(' ');
 
   return (
     <>
-      <form className={s.form} onSubmit={submit} noValidate>
+      <form className={s.form} onSubmit={submit} noValidate inert={placeholder} aria-busy={placeholder || undefined}>
         <div className={s.field}>
           <label className={s.label} htmlFor="total">Amount</label>
-          <div className={s.amountWrap} data-invalid={touched.total && !!totalError}>
+          <div className={s.amountWrap} data-invalid={shows('total')}>
             <span className={s.rupee} aria-hidden="true">₹</span>
             <input
-              id="total" className={s.amountInput} inputMode="decimal" autoComplete="off" placeholder="0"
+              ref={totalRef}
+              id="total"
+              className={s.amountInput}
+              inputMode="decimal"
+              autoComplete="off"
+              placeholder="0"
               value={total}
-              onChange={(e) => setTotal(formatInputAmount(e.target.value))}
-              onBlur={() => setTouched((t) => ({ ...t, total: true }))}
-              aria-invalid={touched.total && !!totalError}
-              aria-describedby="total-hint"
+              onChange={(e) => {
+                setTotal(sanitizeAmountInput(e.target.value));
+                editing('total');
+              }}
+              onBlur={() => {
+                setTotal(formatInputAmount);
+                leave('total');
+              }}
+              aria-invalid={shows('total')}
+              aria-describedby={shows('total') ? 'total-error' : 'total-hint'}
             />
           </div>
           <div id="total-hint" className={s.preview} aria-live="polite">
-            {touched.total && totalError ? (
-              <p className={s.error}>{totalError}</p>
-            ) : preview && preview.length > 1 ? (
-              <>
-                <span className={s.previewLabel}>{preview.length} payments:</span>
-                {preview.map((c, i) => (
-                  <span key={i} style={{ display: 'contents' }}>
-                    <span className={`${s.chip} ${i === preview.length - 1 ? s.last : ''}`}>{formatInr(c).replace('.00', '')}</span>
-                    {i < preview.length - 1 && <span className={s.plus} aria-hidden="true">+</span>}
-                  </span>
-                ))}
-              </>
+            {shows('total') ? (
+              <p id="total-error" className={s.error}>{errors.total}</p>
             ) : preview ? (
-              <span className={s.previewLabel}>Under the limit — one payment</span>
+              <SplitPreview chunks={preview} />
             ) : null}
           </div>
         </div>
@@ -152,17 +246,37 @@ export function Splitter() {
         <div className={s.field}>
           <label className={s.label} htmlFor="pa">Merchant UPI ID</label>
           <input
-            id="pa" className={s.input} autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder="shopname@okaxis"
-            value={pa} onChange={(e) => setPa(e.target.value)}
-            onBlur={() => setTouched((t) => ({ ...t, pa: true }))}
-            aria-invalid={touched.pa && !!paError}
-            aria-describedby={touched.pa && paError ? 'pa-error' : undefined}
+            ref={paRef}
+            id="pa"
+            className={s.input}
+            inputMode="email"
+            autoCapitalize="off"
+            autoCorrect="off"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="shopname@okaxis"
+            value={pa}
+            onChange={(e) => {
+              setPa(e.target.value);
+              editing('pa');
+            }}
+            onBlur={() => leave('pa')}
+            aria-invalid={shows('pa')}
+            aria-describedby={shows('pa') ? 'pa-error' : undefined}
           />
-          {touched.pa && paError && <p id="pa-error" className={s.error}>{paError}</p>}
+          {shows('pa') && <p id="pa-error" className={s.error}>{errors.pa}</p>}
           {recent.length > 0 && (
-            <div className={s.recent} aria-label="Recent merchants">
+            <div className={s.recent} role="group" aria-label="Recent merchants">
               {recent.map((r) => (
-                <button key={r.pa} type="button" className={s.recentChip} onClick={() => { setPa(r.pa); setPn(r.pn); }}>
+                <button
+                  key={r.pa.toLowerCase()}
+                  type="button"
+                  className={s.recentChip}
+                  onClick={() => {
+                    setPa(r.pa);
+                    setPn(r.pn);
+                  }}
+                >
                   {r.pn ? `${r.pn} · ${r.pa}` : r.pa}
                 </button>
               ))}
@@ -181,71 +295,83 @@ export function Splitter() {
           </div>
         </div>
 
-        <details className={s.advanced} open={maxNum !== DEFAULT_MAX}>
+        <details className={s.advanced} open={advancedOpen} onToggle={(e) => setAdvancedOpen(e.currentTarget.open)}>
           <summary>Max per payment</summary>
           <div className={s.field}>
             <label className={s.label} htmlFor="max">Each payment stays at or under</label>
-            <div className={`${s.amountWrap} ${s.small}`} data-invalid={!!maxError}>
+            <div className={`${s.amountWrap} ${s.small}`} data-invalid={shows('max')}>
               <span className={s.rupee} aria-hidden="true">₹</span>
-              <input id="max" className={s.amountInput} inputMode="decimal" value={max} onChange={(e) => setMax(e.target.value)} aria-invalid={!!maxError} />
+              <input
+                ref={maxRef}
+                id="max"
+                className={s.amountInput}
+                inputMode="decimal"
+                autoComplete="off"
+                value={max}
+                onChange={(e) => {
+                  setMax(sanitizeAmountInput(e.target.value));
+                  editing('max');
+                }}
+                onBlur={() => {
+                  setMax(formatInputAmount);
+                  leave('max');
+                }}
+                aria-invalid={shows('max')}
+                aria-describedby={shows('max') ? 'max-error' : undefined}
+              />
             </div>
-            {maxError && <p className={s.error}>{maxError}</p>}
+            {shows('max') && <p id="max-error" className={s.error}>{errors.max}</p>}
           </div>
         </details>
 
-        <button type="submit" className="btn btn-primary">Split into payments</button>
+        {/* aria-disabled rather than disabled: it stays focusable, and pressing it explains what's missing. */}
+        <button
+          type="submit"
+          className={`btn btn-primary ${s.submit}`}
+          aria-disabled={!valid}
+          aria-describedby={valid ? undefined : 'submit-hint'}
+        >
+          Split into payments
+        </button>
+        {!valid && <span id="submit-hint" className={s.srOnly}>{submitHint}</span>}
       </form>
 
       {plan && (
-        <section ref={resultRef} className={s.result} aria-labelledby="result-title">
-          <header className={s.resultHead}>
-            <h2 id="result-title" tabIndex={-1}>
-              {plan.parts.length} payment{plan.parts.length === 1 ? '' : 's'} for {formatInr(plan.input.total)}
-            </h2>
-            <p>{plan.input.pn ? `to ${plan.input.pn} (${plan.input.pa})` : `to ${plan.input.pa}`}</p>
-            <div className={s.progress} role="progressbar" aria-valuemin={0} aria-valuemax={plan.parts.length} aria-valuenow={paidCount}>
-              <span style={{ width: `${(paidCount / plan.parts.length) * 100}%` }} />
-            </div>
-            <p className={s.progressText} aria-live="polite">
-              {paidCount === plan.parts.length ? `All ${plan.parts.length} paid` : `${paidCount} of ${plan.parts.length} paid`}
-            </p>
-            {nextPart ? (
-              <a className={`btn btn-primary ${s.next}`} href={nextPart.url}>
-                Pay Part {nextPart.index + 1} of {plan.parts.length} · {formatInr(nextPart.amount)}
-              </a>
-            ) : (
-              <div className={s.done}>Done — all parts paid. Share the breakdown with the shop if they need it.</div>
-            )}
-          </header>
-
-          <ol className={s.parts}>
-            {plan.parts.map((p) => (
-              <li key={p.index} className={`${s.part} ${p.paid ? s.isPaid : ''} ${nextPart?.index === p.index ? s.isNext : ''}`}>
-                <span className={s.partAmount}>{formatInr(p.amount)}</span>
-                <span className={s.partLabel}>Part {p.index + 1} of {plan.parts.length}</span>
-                <a className={`btn btn-primary ${s.partPay}`} href={p.url}>{p.paid ? 'Pay again' : 'Pay'}</a>
-                <QrCode value={p.url} className={s.partQr} />
-                <label className={s.partPaid}>
-                  <input type="checkbox" checked={p.paid} onChange={(e) => togglePaid(p.index, e.target.checked)} /> Paid
-                </label>
-              </li>
-            ))}
-          </ol>
-
-          <div className={s.actions}>
-            <a className="btn btn-secondary" href={`https://wa.me/?text=${encodeURIComponent(waText)}`} target="_blank" rel="noopener noreferrer">
-              Send on WhatsApp
-            </a>
-            <button type="button" className="btn btn-secondary" onClick={copy}>{copied ?? 'Copy breakdown'}</button>
-            <button type="button" className="btn btn-tertiary" onClick={reset}>Start over</button>
-          </div>
-
-          <p className={s.fine}>
-            Each Pay button opens your UPI app with the amount and note filled in. This page can&apos;t see whether a
-            payment went through, so tick each one off yourself. On a computer, scan the QR with your phone instead.
-          </p>
-        </section>
+        <PlanResult
+          plan={plan}
+          sectionRef={resultRef}
+          headingRef={headingRef}
+          onTogglePaid={togglePaid}
+          onStartOver={startOver}
+        />
       )}
+    </>
+  );
+}
+
+const chipAmount = (n: number) => formatInr(n).replace(/\.00$/, '');
+
+/** "3 payments: ₹1,999 + ₹1,999 + ₹1,002"; longer splits collapse to "25 × ₹1,999 + ₹25". */
+function SplitPreview({ chunks }: { chunks: number[] }) {
+  const n = chunks.length;
+  if (n === 1) return <span className={s.previewLabel}>Under the limit — one payment</span>;
+  const first = chunks[0];
+  const last = chunks[n - 1];
+  const chips =
+    n <= 3
+      ? chunks.map(chipAmount)
+      : last === first
+        ? [`${n} × ${chipAmount(first)}`]
+        : [`${n - 1} × ${chipAmount(first)}`, chipAmount(last)];
+  return (
+    <>
+      <span className={s.previewLabel}>{n} payments:</span>
+      {chips.map((text, i) => (
+        <Fragment key={i}>
+          <span className={`${s.chip} ${i === chips.length - 1 ? s.last : ''}`}>{text}</span>
+          {i < chips.length - 1 && <span className={s.plus} aria-hidden="true">+</span>}
+        </Fragment>
+      ))}
     </>
   );
 }
