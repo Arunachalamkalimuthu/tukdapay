@@ -1,0 +1,81 @@
+.form { display: grid; gap: 18px; }
+.field { display: grid; gap: 6px; }
+.label { font-weight: 500; }
+.label small { color: var(--muted); font-weight: 400; font-size: 0.85em; margin-left: 4px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 380px) { .row { grid-template-columns: 1fr; } }
+
+.input {
+  font: inherit; color: var(--ink); background: var(--surface);
+  border: 1.5px solid var(--line); border-radius: var(--radius);
+  padding: 11px 13px; width: 100%; min-width: 0;
+}
+.input[aria-invalid='true'] { border-color: var(--error); }
+.error { color: var(--error); font-size: 15px; font-weight: 500; margin: 0; }
+
+.amountWrap {
+  display: flex; align-items: baseline; gap: 6px;
+  background: var(--surface); border: 1.5px solid var(--line);
+  border-radius: var(--radius); padding: 8px 16px;
+}
+.amountWrap:focus-within { border-color: var(--accent); }
+.amountWrap[data-invalid='true'] { border-color: var(--error); }
+.rupee { font-size: 34px; font-weight: 500; color: var(--muted); }
+.amountInput {
+  font: inherit; color: var(--ink); border: 0; padding: 0; background: transparent; width: 100%; min-width: 0;
+  font-size: 52px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1;
+}
+.amountInput:focus-visible { outline: 0; }
+.amountWrap.small { padding: 6px 12px; }
+.amountWrap.small .rupee { font-size: 18px; }
+.amountWrap.small .amountInput { font-size: 22px; font-weight: 700; }
+
+.preview { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-height: 30px; font-weight: 700; }
+.previewLabel { color: var(--muted); font-weight: 500; }
+.chip { background: var(--surface); border: 1.5px solid var(--line); border-radius: 8px; padding: 2px 9px; font-size: 15px; }
+.chip.last { border-color: var(--accent); color: var(--accent); }
+.plus { color: var(--muted); font-weight: 500; }
+
+.recent { display: flex; flex-wrap: wrap; gap: 6px; }
+.recentChip {
+  font: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
+  background: transparent; color: var(--ink); border: 1.5px solid var(--line); border-radius: 999px; padding: 4px 11px;
+}
+.recentChip:hover { border-color: var(--accent); color: var(--accent); }
+
+.advanced summary { cursor: pointer; color: var(--muted); font-weight: 500; }
+.advanced[open] summary { margin-bottom: 8px; }
+
+/* Result */
+.result { margin-top: 40px; scroll-margin-top: 16px; }
+.resultHead { position: sticky; top: 0; background: var(--paper); padding: 10px 0 12px; z-index: 2; border-bottom: 1.5px solid var(--line); }
+.resultHead h2 { font-size: 24px; font-weight: 800; margin: 0 0 2px; }
+.resultHead p { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
+.progress { height: 6px; border-radius: 3px; background: var(--line); margin: 12px 0 6px; overflow: hidden; }
+.progress span { display: block; height: 100%; background: var(--paid); transition: width 200ms ease; }
+.progressText { font-weight: 500; margin: 0; }
+.next { margin-top: 10px; width: 100%; font-size: 17px; }
+.done { margin-top: 10px; padding: 12px 14px; border-radius: var(--radius); background: var(--paid-wash); color: var(--paid); font-weight: 700; }
+
+.parts { list-style: none; margin: 0; padding: 0; }
+.part {
+  display: grid; grid-template-columns: 1fr auto;
+  grid-template-areas: 'amount pay' 'label pay' 'qr qr' 'paid paid';
+  column-gap: 14px; row-gap: 4px; align-items: center;
+  padding: 16px 4px; border-bottom: 1.5px solid var(--line);
+}
+.part.isPaid { background: var(--paid-wash); }
+.part.isNext { box-shadow: inset 3px 0 0 var(--accent); padding-left: 10px; }
+.partAmount { grid-area: amount; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+.part.isPaid .partAmount { color: var(--paid); }
+.partLabel { grid-area: label; color: var(--muted); }
+.partPay { grid-area: pay; white-space: nowrap; }
+.part.isPaid .partPay { background: var(--surface); color: var(--muted); border-color: var(--line); }
+.partQr { grid-area: qr; display: none; margin-top: 10px; }
+.partQr canvas { display: block; border-radius: 6px; background: #fff; padding: 6px; }
+@media (min-width: 700px) and (hover: hover) { .partQr { display: block; } }
+.partPaid { grid-area: paid; display: flex; align-items: center; gap: 8px; margin-top: 6px; font-weight: 500; cursor: pointer; }
+.partPaid input { width: 20px; height: 20px; accent-color: var(--paid); }
+
+.actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+.fine { color: var(--muted); font-size: 15px; margin-top: 24px; max-width: 48ch; }

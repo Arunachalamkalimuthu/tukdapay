@@ -1,0 +1,59 @@
+import { PostLayout, postMetadata } from '@/components/PostLayout';
+
+export const metadata = postMetadata('how-upi-deep-links-work');
+
+<PostLayout slug="how-upi-deep-links-work">
+
+Every "Pay" button in TukdaPay is a plain link. This is what's in it and why a web page can build one but can't see what happens next.
+
+## The URL
+
+```
+upi://pay?pa=shop@okaxis&pn=Sri%20Tea%20Stall&am=1999.00&cu=INR&tn=Part%201%2F3
+```
+
+| Param | Meaning               | Notes                                        |
+| ----- | --------------------- | -------------------------------------------- |
+| `pa`  | Payee address (VPA)   | Required. `name@handle`.                     |
+| `pn`  | Payee name            | Shown in the app. Optional.                  |
+| `am`  | Amount                | Two decimals. Most apps lock it when present. |
+| `cu`  | Currency              | Always `INR`.                                |
+| `tn`  | Transaction note      | Free text, shown to both sides.              |
+| `tr`  | Transaction reference | Merchant reference id. Optional.             |
+
+Values are URL-encoded. The scheme is defined in NPCI's UPI Linking Specification; the parameters above are the ones every mainstream app honours.
+
+## What happens on tap
+
+1. The browser sees a non-http scheme and asks the OS.
+2. Android shows a chooser of apps registered for `upi://` (or opens the default). iOS opens the app registered for the scheme.
+3. The app parses the query, pre-fills the screen, and asks for the UPI PIN.
+4. The app talks to the bank via NPCI. The browser is not involved.
+
+## What the page can't know
+
+Step 4 never reports back to the page. There is no callback, no return URL, no event. That's why TukdaPay's **Paid** is a checkbox the user ticks, not a status it detects. A merchant-side integration (a payment gateway, or NPCI's collect API) is the only way to get confirmations, and that requires being the payee.
+
+## QR codes are the same link
+
+A UPI QR sticker is just this URL encoded as a QR. TukdaPay renders one per part on desktop using the `qrcode` library, so a phone can scan what it can't tap.
+
+## Building one
+
+```ts
+export function buildUpiUrl({ pa, pn, am, tn }: UpiParams): string {
+  const params: [string, string][] = [['pa', pa]];
+  if (pn) params.push(['pn', pn]);
+  params.push(['am', am.toFixed(2)], ['cu', 'INR']);
+  if (tn) params.push(['tn', tn]);
+  return 'upi://pay?' + params
+    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+    .join('&');
+}
+```
+
+That's the whole of `lib/upi.ts`, minus validation. The tests are in the [repository](https://github.com/Arunachalamkalimuthu/tukdapay).
+
+<a className="btn btn-primary" href="https://github.com/Arunachalamkalimuthu/tukdapay">Read the source</a>
+
+</PostLayout>
