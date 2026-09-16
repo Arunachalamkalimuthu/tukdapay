@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Split Pay</title>
+  <meta name="description" content="Split a UPI payment into parts under a per-transaction limit and pay each one from your UPI app." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,700;12..96,800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="page">
+    <header class="masthead">
+      <h1>Split Pay</h1>
+      <p>Break a bill into UPI payments that each stay under the limit, then pay them one by one from your UPI app.</p>
+    </header>
+
+    <form id="form" class="setup" novalidate>
+      <label class="amount-field">
+        <span class="field-name">Amount</span>
+        <span class="amount-wrap">
+          <span class="rupee" aria-hidden="true">₹</span>
+          <input id="total" name="total" type="text" inputmode="decimal" autocomplete="off" placeholder="0" required />
+        </span>
+        <span id="amount-hint" class="amount-hint" aria-live="polite"></span>
+      </label>
+
+      <label class="field">
+        <span class="field-name">Merchant UPI ID</span>
+        <input id="pa" name="pa" type="text" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="shopname@okaxis" required />
+      </label>
+
+      <div class="field-row">
+        <label class="field">
+          <span class="field-name">Merchant name <small>optional</small></span>
+          <input id="pn" name="pn" type="text" placeholder="Sri Tea Stall" />
+        </label>
+        <label class="field">
+          <span class="field-name">Note <small>optional</small></span>
+          <input id="note" name="note" type="text" placeholder="Order 42" />
+        </label>
+      </div>
+
+      <details class="advanced">
+        <summary>Max per payment</summary>
+        <label class="field">
+          <span class="field-name">Each payment stays at or under</span>
+          <span class="amount-wrap small">
+            <span class="rupee" aria-hidden="true">₹</span>
+            <input id="max" name="max" type="text" inputmode="decimal" value="1999" />
+          </span>
+        </label>
+      </details>
+
+      <p id="form-error" class="form-error" role="alert" hidden></p>
+
+      <button type="submit" class="primary">Split into payments</button>
+    </form>
+
+    <section id="result" class="result" hidden>
+      <header class="result-head">
+        <h2 id="result-title"></h2>
+        <p id="result-payee"></p>
+        <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" id="progress">
+          <span id="progress-fill"></span>
+        </div>
+        <p id="progress-text" class="progress-text" aria-live="polite"></p>
+      </header>
+
+      <ol id="parts" class="parts"></ol>
+
+      <div class="result-actions">
+        <button type="button" id="copy" class="secondary">Copy breakdown</button>
+        <button type="button" id="reset" class="tertiary">Start over</button>
+      </div>
+
+      <p class="fineprint">
+        Each Pay button opens your UPI app with the amount and note filled in. This page can't see whether a payment
+        went through, so tick each one off yourself. On a computer, scan the QR with your phone instead.
+      </p>
+    </section>
+  </main>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
