@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
   trailingSlash: true,
   images: { unoptimized: true },
   pageExtensions: ['ts', 'tsx', 'mdx'],
+  turbopack: { root: import.meta.dirname },
 };
 
 const withMDX = createMDX({});

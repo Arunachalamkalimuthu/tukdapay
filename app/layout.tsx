@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Bricolage_Grotesque } from 'next/font/google';
 import { SITE_NAME, SITE_URL } from '@/lib/site';
+import { FEED_URL, OG_IMAGE } from '@/lib/metadata';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import './globals.css';
@@ -22,7 +23,7 @@ export const metadata: Metadata = {
     'Free UPI payment splitter. Break a bill over ₹2000 into payments of ₹1999 or less and pay each one from GPay, PhonePe, Paytm or any UPI app. No signup, no backend.',
   applicationName: SITE_NAME,
   keywords: ['UPI split payment', 'UPI 2000 limit', 'split UPI transaction', 'GPay split payment', 'PhonePe split payment', 'UPI payment splitter'],
-  alternates: { canonical: '/', types: { 'application/rss+xml': `${SITE_URL}/blog/feed.xml` } },
+  alternates: { canonical: '/', types: { 'application/rss+xml': FEED_URL } },
   openGraph: {
     type: 'website',
     siteName: SITE_NAME,
@@ -30,7 +31,7 @@ export const metadata: Metadata = {
     url: '/',
     title: 'TukdaPay – Split UPI payments above ₹2000',
     description: 'Break a big UPI bill into parts of ₹1999 or less and pay each from your own UPI app. Free, no signup.',
-    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'TukdaPay: ₹5,000 → ₹1,999 + ₹1,999 + ₹1,002' }],
+    images: [OG_IMAGE],
   },
   twitter: { card: 'summary_large_image' },
   icons: { icon: '/favicon.svg' },
