@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+  <title>TukdaPay blog</title>
+  <link>https://arunachalamkalimuthu.github.io/tukdapay/blog/</link>
+  <atom:link href="https://arunachalamkalimuthu.github.io/tukdapay/blog/feed.xml" rel="self" type="application/rss+xml" />
+  <description>Plain-language guides on UPI: splitting payments, per-transaction rules, and how upi:// links work.</description>
+  <language>en-in</language>
+  <item>
+    <title>How to split a UPI payment above ₹2000</title>
+    <link>https://arunachalamkalimuthu.github.io/tukdapay/blog/split-upi-payment-above-2000/</link>
+    <guid>https://arunachalamkalimuthu.github.io/tukdapay/blog/split-upi-payment-above-2000/</guid>
+    <pubDate>Thu, 17 Sep 2026 09:00:00 +0530</pubDate>
+    <description>Step-by-step: break a bill over ₹2000 into UPI payments of ₹1999 or less and pay each one from GPay, PhonePe or Paytm.</description>
+  </item>
+  <item>
+    <title>The ₹2000 UPI threshold: what to check before you pay</title>
+    <link>https://arunachalamkalimuthu.github.io/tukdapay/blog/upi-2000-threshold-what-to-check/</link>
+    <guid>https://arunachalamkalimuthu.github.io/tukdapay/blog/upi-2000-threshold-what-to-check/</guid>
+    <pubDate>Thu, 17 Sep 2026 09:00:00 +0530</pubDate>
+    <description>Per-transaction UPI rules change often. How to find out what actually applies to your payment today, from the sources that decide it.</description>
+  </item>
+  <item>
+    <title>Does splitting a UPI payment actually save money?</title>
+    <link>https://arunachalamkalimuthu.github.io/tukdapay/blog/does-splitting-upi-save-money/</link>
+    <guid>https://arunachalamkalimuthu.github.io/tukdapay/blog/does-splitting-upi-save-money/</guid>
+    <pubDate>Thu, 17 Sep 2026 09:00:00 +0530</pubDate>
+    <description>A worked example of when paying a bill in parts saves a per-transaction charge, when it saves nothing, and what it costs in time.</description>
+  </item>
+  <item>
+    <title>How upi://pay deep links work</title>
+    <link>https://arunachalamkalimuthu.github.io/tukdapay/blog/how-upi-deep-links-work/</link>
+    <guid>https://arunachalamkalimuthu.github.io/tukdapay/blog/how-upi-deep-links-work/</guid>
+    <pubDate>Thu, 17 Sep 2026 09:00:00 +0530</pubDate>
+    <description>The upi://pay URL scheme explained for developers: parameters, encoding, what apps do with it, and what a web page can and cannot know.</description>
+  </item>
+</channel>
+</rss>

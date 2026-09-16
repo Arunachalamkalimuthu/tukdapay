@@ -55,15 +55,6 @@ body {
   padding: 32px 16px 64px;
 }
 
-.masthead h1 {
-  font-size: 34px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  margin: 0 0 6px;
-  line-height: 1.1;
-}
-.masthead p { margin: 0 0 28px; color: var(--muted); max-width: 40ch; }
-
 /* Form */
 .setup { display: grid; gap: 18px; }
 .field, .amount-field { display: grid; gap: 6px; }
@@ -181,3 +172,62 @@ button {
 .faq dd { margin: 4px 0 0; color: var(--muted); max-width: 52ch; }
 .faq a { color: var(--accent); }
 .faq code { font-family: inherit; }
+
+/* Top bar */
+.skip { position: absolute; left: -999px; top: 8px; background: var(--accent); color: var(--accent-ink); padding: 8px 12px; border-radius: 8px; }
+.skip:focus { left: 16px; z-index: 10; }
+.topbar {
+  max-width: 480px; margin: 0 auto; padding: 18px 16px 0;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.wordmark { font-weight: 800; font-size: 20px; letter-spacing: -0.02em; color: var(--ink); text-decoration: none; }
+.wordmark span { color: var(--accent); }
+.topbar nav { display: flex; gap: 18px; }
+.topbar nav a { color: var(--muted); text-decoration: none; font-weight: 500; }
+.topbar nav a:hover { color: var(--ink); }
+
+/* Hero */
+.page { padding-top: 28px; }
+.hero h1 {
+  font-size: 40px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.02;
+  margin: 0 0 12px;
+}
+.hero > p { margin: 0 0 18px; color: var(--muted); max-width: 42ch; }
+.example {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px;
+  margin: 0 0 36px !important;
+  font-weight: 700; color: var(--ink) !important;
+}
+.ex-total { font-size: 22px; font-weight: 800; }
+.ex-arrow, .ex-plus { color: var(--muted); font-weight: 500; }
+.ex-part {
+  background: var(--surface); border: 1.5px solid var(--line);
+  border-radius: 8px; padding: 3px 9px;
+}
+.ex-part:last-child { border-color: var(--accent); color: var(--accent); }
+
+/* Sections after the tool */
+.steps, .why, .from-blog { margin-top: 56px; border-top: 1.5px solid var(--line); padding-top: 28px; }
+.steps h2, .why h2, .from-blog h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 14px; }
+.steps ol { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 14px; }
+.steps li { counter-increment: step; display: grid; grid-template-columns: 34px 1fr; gap: 12px; color: var(--muted); max-width: 52ch; }
+.steps li::before {
+  content: counter(step);
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--accent); color: var(--accent-ink);
+  display: grid; place-items: center; font-weight: 800;
+}
+.steps strong, .why strong { color: var(--ink); }
+.why ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+.why li { color: var(--muted); max-width: 52ch; }
+.why code { font-family: inherit; }
+
+.from-blog ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
+.from-blog li { display: grid; gap: 2px; }
+.from-blog li a { color: var(--ink); font-weight: 700; text-decoration: none; }
+.from-blog li a:hover { color: var(--accent); }
+.from-blog li span { color: var(--muted); max-width: 52ch; }
+.all-posts { display: inline-block; margin-top: 16px; color: var(--accent); font-weight: 700; }
+
+.footer { max-width: 480px; margin: 0 auto; padding: 0 16px 48px; color: var(--muted); font-size: 15px; }
+.footer a { color: var(--accent); }

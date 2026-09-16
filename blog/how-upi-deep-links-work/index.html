@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>How upi://pay deep links work – TukdaPay</title>
+  <meta name="description" content="The upi://pay URL scheme explained for developers: parameters, encoding, what apps do with it, and what a web page can and cannot know." />
+  <link rel="canonical" href="https://arunachalamkalimuthu.github.io/tukdapay/blog/how-upi-deep-links-work/" />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#a8256b" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="TukdaPay" />
+  <meta property="og:title" content="How upi://pay deep links work" />
+  <meta property="og:description" content="The upi://pay URL scheme explained for developers: parameters, encoding, what apps do with it, and what a web page can and cannot know." />
+  <meta property="og:url" content="https://arunachalamkalimuthu.github.io/tukdapay/blog/how-upi-deep-links-work/" />
+  <meta property="og:image" content="https://arunachalamkalimuthu.github.io/tukdapay/og.png" />
+  <meta property="og:locale" content="en_IN" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="How upi://pay deep links work" />
+  <meta name="twitter:description" content="The upi://pay URL scheme explained for developers: parameters, encoding, what apps do with it, and what a web page can and cannot know." />
+  <meta name="twitter:image" content="https://arunachalamkalimuthu.github.io/tukdapay/og.png" />
+  <link rel="alternate" type="application/rss+xml" title="TukdaPay blog" href="../../blog/feed.xml" />
+  <link rel="icon" href="../../favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,700;12..96,800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="stylesheet" href="../../blog/blog.css" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "How upi://pay deep links work",
+    "description": "The upi://pay URL scheme explained for developers: parameters, encoding, what apps do with it, and what a web page can and cannot know.",
+    "datePublished": "2026-09-17",
+    "dateModified": "2026-09-17",
+    "author": { "@type": "Person", "name": "Arunachalam Kalimuthu", "url": "https://github.com/Arunachalamkalimuthu" },
+    "publisher": { "@type": "Organization", "name": "TukdaPay", "url": "https://arunachalamkalimuthu.github.io/tukdapay/" },
+    "mainEntityOfPage": "https://arunachalamkalimuthu.github.io/tukdapay/blog/how-upi-deep-links-work/",
+    "image": "https://arunachalamkalimuthu.github.io/tukdapay/og.png",
+    "inLanguage": "en-IN"
+  }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="wordmark" href="../../" aria-label="TukdaPay home">Tukda<span>Pay</span></a>
+    <nav aria-label="Site">
+      <a href="../../blog/">Blog</a>
+      <a href="https://github.com/Arunachalamkalimuthu/tukdapay">GitHub</a>
+    </nav>
+  </header>
+  <main class="page">
+    <article class="post">
+      <p class="post-meta"><a href="../../blog/">Blog</a> · <time datetime="2026-09-17">17 September 2026</time></p>
+      <h1>How upi://pay deep links work</h1>
+
+<p class="lede">Every "Pay" button in TukdaPay is a plain link. This is what's in it and why a web page can build one but can't see what happens next.</p>
+
+<h2>The URL</h2>
+<pre><code>upi://pay?pa=shop@okaxis&amp;pn=Sri%20Tea%20Stall&amp;am=1999.00&amp;cu=INR&amp;tn=Part%201%2F3</code></pre>
+<table>
+  <thead><tr><th>Param</th><th>Meaning</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td><code>pa</code></td><td>Payee address (VPA)</td><td>Required. <code>name@handle</code>.</td></tr>
+    <tr><td><code>pn</code></td><td>Payee name</td><td>Shown in the app. Optional.</td></tr>
+    <tr><td><code>am</code></td><td>Amount</td><td>Two decimals. Most apps lock it when present.</td></tr>
+    <tr><td><code>cu</code></td><td>Currency</td><td>Always <code>INR</code>.</td></tr>
+    <tr><td><code>tn</code></td><td>Transaction note</td><td>Free text, shown to both sides.</td></tr>
+    <tr><td><code>tr</code></td><td>Transaction reference</td><td>Merchant reference id. Optional.</td></tr>
+  </tbody>
+</table>
+<p>Values are URL-encoded. The scheme is defined in NPCI's UPI Linking Specification; the parameters above are the ones every mainstream app honours.</p>
+
+<h2>What happens on tap</h2>
+<ol>
+  <li>The browser sees a non-http scheme and asks the OS.</li>
+  <li>Android shows a chooser of apps registered for <code>upi://</code> (or opens the default). iOS opens the app registered for the scheme.</li>
+  <li>The app parses the query, pre-fills the screen, and asks for the UPI PIN.</li>
+  <li>The app talks to the bank via NPCI. The browser is not involved.</li>
+</ol>
+
+<h2>What the page can't know</h2>
+<p>Step 4 never reports back to the page. There is no callback, no return URL, no event. That's why TukdaPay's <strong>Paid</strong> is a checkbox the user ticks, not a status it detects. A merchant-side integration (a payment gateway, or NPCI's collect API) is the only way to get confirmations, and that requires being the payee.</p>
+
+<h2>QR codes are the same link</h2>
+<p>A UPI QR sticker is just this URL encoded as a QR. TukdaPay renders one per part on desktop using the <code>qrcode</code> library, so a phone can scan what it can't tap.</p>
+
+<h2>Building one</h2>
+<pre><code>export function buildUpiUrl({ pa, pn, am, tn }) {
+  const params = [['pa', pa]];
+  if (pn) params.push(['pn', pn]);
+  params.push(['am', am.toFixed(2)], ['cu', 'INR']);
+  if (tn) params.push(['tn', tn]);
+  return 'upi://pay?' + params
+    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+    .join('&amp;');
+}</code></pre>
+<p>That's the whole of <code>src/upi.js</code>, minus validation. The tests are in the <a href="https://github.com/Arunachalamkalimuthu/tukdapay">repository</a>.</p>
+
+<a class="cta" href="https://github.com/Arunachalamkalimuthu/tukdapay">Read the source</a>
+
+      <p class="post-footer">Found a mistake? <a href="https://github.com/Arunachalamkalimuthu/tukdapay/issues">Open an issue</a> — this post lives in the repo too.</p>
+    </article>
+  </main>
+  <footer class="footer">
+    <p>TukdaPay is a free, open-source tool. It doesn't move money and can't see whether a payment went through. <a href="https://github.com/Arunachalamkalimuthu/tukdapay">Source on GitHub</a> · <a href="../../blog/">Blog</a> · <a href="../../blog/feed.xml">RSS</a></p>
+  </footer>
+</body>
+</html>

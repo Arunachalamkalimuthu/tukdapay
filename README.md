@@ -52,6 +52,12 @@ src/app.js               DOM wiring + localStorage
 test/                    node --test
 ```
 
+## Blog
+
+Plain-language posts live in `blog/` as static HTML (one folder per post,
+plus `blog/feed.xml` for RSS). Add a post by copying an existing folder,
+then add it to `blog/index.html`, `blog/feed.xml` and `sitemap.xml`.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). MIT licensed.

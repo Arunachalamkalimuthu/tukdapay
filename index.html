@@ -15,7 +15,13 @@
   <meta property="og:description" content="Break a big UPI bill into parts of ₹1999 or less and pay each from your own UPI app. Free, no signup." />
   <meta property="og:url" content="https://arunachalamkalimuthu.github.io/tukdapay/" />
   <meta property="og:locale" content="en_IN" />
-  <meta name="twitter:card" content="summary" />
+  <meta property="og:image" content="https://arunachalamkalimuthu.github.io/tukdapay/og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://arunachalamkalimuthu.github.io/tukdapay/og.png" />
+  <link rel="alternate" type="application/rss+xml" title="TukdaPay blog" href="blog/feed.xml" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <meta name="twitter:title" content="TukdaPay – Split UPI payments above ₹2000" />
   <meta name="twitter:description" content="Break a big UPI bill into parts of ₹1999 or less and pay each from your own UPI app. Free, no signup." />
   <script type="application/ld+json">
@@ -34,17 +40,46 @@
     "license": "https://github.com/Arunachalamkalimuthu/tukdapay/blob/main/LICENSE"
   }
   </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      { "@type": "Question", "name": "What does TukdaPay do?", "acceptedAnswer": { "@type": "Answer", "text": "It takes one amount and breaks it into several UPI payments that each stay at or under a limit you choose (₹1999 by default). Each part gets its own Pay link or QR code." } },
+      { "@type": "Question", "name": "Does it move money?", "acceptedAnswer": { "@type": "Answer", "text": "No. TukdaPay only prepares upi://pay links. Your own UPI app makes every payment, and this page never sees your bank details." } },
+      { "@type": "Question", "name": "Which UPI apps work?", "acceptedAnswer": { "@type": "Answer", "text": "Any app that handles UPI links: Google Pay, PhonePe, Paytm, BHIM, Amazon Pay, CRED and bank apps. On a computer, scan the QR code with your phone." } },
+      { "@type": "Question", "name": "Can I change the ₹1999 limit?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Open Max per payment above the Split button and set whatever limit applies to you." } },
+      { "@type": "Question", "name": "Is it free and open source?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. MIT licensed on GitHub. No signup, no ads, no tracking." } }
+    ]
+  }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,700;12..96,800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <a class="skip" href="#form">Skip to the splitter</a>
+  <header class="topbar">
+    <a class="wordmark" href="./" aria-label="TukdaPay home">Tukda<span>Pay</span></a>
+    <nav aria-label="Site">
+      <a href="blog/">Blog</a>
+      <a href="https://github.com/Arunachalamkalimuthu/tukdapay">GitHub</a>
+    </nav>
+  </header>
+
   <main class="page">
-    <header class="masthead">
-      <h1>TukdaPay</h1>
-      <p>Split a UPI payment above ₹2000 into parts of ₹1999 or less, then pay them one by one from GPay, PhonePe, Paytm or any UPI app.</p>
-    </header>
+    <section class="hero">
+      <h1>Bill above ₹2000?<br />Pay it in tukde.</h1>
+      <p>Split one UPI payment into parts of ₹1999 or less and pay each from GPay, PhonePe, Paytm or any UPI app. Free, no signup, nothing leaves your phone.</p>
+      <p class="example" aria-label="Example: 5000 rupees becomes 1999 plus 1999 plus 1002">
+        <span class="ex-total">₹5,000</span>
+        <span class="ex-arrow" aria-hidden="true">→</span>
+        <span class="ex-part">₹1,999</span><span class="ex-plus" aria-hidden="true">+</span>
+        <span class="ex-part">₹1,999</span><span class="ex-plus" aria-hidden="true">+</span>
+        <span class="ex-part">₹1,002</span>
+      </p>
+    </section>
 
     <form id="form" class="setup" novalidate>
       <label class="amount-field">
@@ -111,6 +146,24 @@
       </p>
     </section>
 
+    <section class="steps" aria-labelledby="steps-title">
+      <h2 id="steps-title">How it works</h2>
+      <ol>
+        <li><span><strong>Enter the bill</strong> and the merchant's UPI ID from their sticker or invoice.</span></li>
+        <li><span><strong>Split</strong> — TukdaPay breaks it into parts at or under your limit, each tagged <em>Part 1/3</em>, <em>Part 2/3</em>… so the shop can match them.</span></li>
+        <li><span><strong>Pay each part</strong> — every Pay button opens your own UPI app with the amount filled in. Tick them off as you go.</span></li>
+      </ol>
+    </section>
+
+    <section class="why" aria-labelledby="why-title">
+      <h2 id="why-title">Why people use it</h2>
+      <ul>
+        <li><strong>Nothing leaves your phone.</strong> No account, no server, no bank details. It only writes <code>upi://pay</code> links.</li>
+        <li><strong>Works with every UPI app.</strong> Google Pay, PhonePe, Paytm, BHIM, CRED, bank apps — on a computer, scan the QR instead.</li>
+        <li><strong>Free and open source.</strong> MIT licensed. Read the code, fork it, fix it.</li>
+      </ul>
+    </section>
+
     <section class="faq" aria-labelledby="faq-title">
       <h2 id="faq-title">Questions</h2>
       <dl>
@@ -130,7 +183,21 @@
         <dd>Yes. MIT licensed on <a href="https://github.com/Arunachalamkalimuthu/tukdapay">GitHub</a>. No signup, no ads, no tracking.</dd>
       </dl>
     </section>
+
+    <section class="from-blog" aria-labelledby="blog-title">
+      <h2 id="blog-title">From the blog</h2>
+      <ul>
+        <li><a href="blog/split-upi-payment-above-2000/">How to split a UPI payment above ₹2000</a><span>Step by step, from the counter to the last PIN entry.</span></li>
+        <li><a href="blog/upi-2000-threshold-what-to-check/">The ₹2000 UPI threshold: what to check before you pay</a><span>Rules change. Here's how to find out what applies to you today.</span></li>
+        <li><a href="blog/does-splitting-upi-save-money/">Does splitting a UPI payment actually save money?</a><span>A worked example, including when it doesn't.</span></li>
+      </ul>
+      <a class="all-posts" href="blog/">All posts</a>
+    </section>
   </main>
+
+  <footer class="footer">
+    <p>TukdaPay is a free, open-source tool. It doesn't move money and can't see whether a payment went through. <a href="https://github.com/Arunachalamkalimuthu/tukdapay">Source on GitHub</a> · <a href="blog/">Blog</a> · <a href="blog/feed.xml">RSS</a></p>
+  </footer>
 
   <script type="module" src="src/app.js"></script>
 </body>
