@@ -1,25 +1,87 @@
-.hero h1 { font-size: 40px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.02; margin: 0 0 12px; }
-.hero p { margin: 0 0 18px; color: var(--muted); max-width: 42ch; }
-.example { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 0 0 36px; font-weight: 700; }
-.exTotal { font-size: 22px; font-weight: 800; }
-.exOp { color: var(--muted); font-weight: 500; }
-.exPart { background: var(--surface); border: 1.5px solid var(--line); border-radius: 8px; padding: 3px 9px; }
-.exPart.last { border-color: var(--accent); color: var(--accent); }
+/* ===== Hero ===== */
+.hero { margin: 0 0 24px; min-width: 0; }
+.hero h1 { font-size: var(--text-display); font-weight: 800; letter-spacing: -0.03em; line-height: 1.02; }
+.hero p { margin: 12px 0 0; max-width: 40ch; color: var(--muted); }
+/*
+ * Below 400px, "UPI bill above ₹2,000?" fits the column in Bricolage (357.5px of 358 at 390px) but not in the
+ * Arial or Android Roboto fallbacks (Roboto needs 367.7px), so the H1 would be 3 lines until the web font arrives
+ * and 2 after, moving the page. Breaking after "UPI bill" there gives 3 lines in every font. From 400px the line
+ * fits in all of them; from 960px, at 48px, it wraps in all of them.
+ */
+.narrowBreak { display: none; }
+@media (max-width: 399.98px) { .narrowBreak { display: inline; } }
 
-.steps { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 14px; }
-.steps li { counter-increment: step; display: grid; grid-template-columns: 34px 1fr; gap: 12px; color: var(--muted); max-width: 52ch; }
-.steps li::before { content: counter(step); width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-weight: 800; }
-.steps strong, .why strong { color: var(--ink); }
-.why { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
-.why li { color: var(--muted); max-width: 52ch; }
+/* ===== Lower sections: spaced apart, no rules ===== */
+.section { margin-top: var(--section-gap); min-width: 0; }
+.section h2 { margin-bottom: 16px; font-size: var(--text-heading); font-weight: 720; letter-spacing: -0.02em; line-height: 1.15; }
+.section strong { color: var(--ink); font-weight: 650; }
 
-.faq dl { margin: 0; }
-.faq dt { font-weight: 700; margin-top: 16px; }
-.faq dd { margin: 4px 0 0; color: var(--muted); max-width: 52ch; }
+/* Hanging ink numerals, no circles. */
+.steps { list-style: none; margin: 0; padding: 0; counter-reset: step; display: grid; gap: 16px; }
+.steps li {
+  counter-increment: step;
+  display: grid; grid-template-columns: 32px minmax(0, 1fr); column-gap: 4px;
+  max-width: 56ch; color: var(--muted);
+}
+.steps li::before {
+  content: counter(step);
+  color: var(--ink); font-size: 24px; font-weight: 720; line-height: 1.1;
+  font-stretch: var(--money-width); font-variant-numeric: tabular-nums;
+}
 
-.posts { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
+.why { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.why li { max-width: 56ch; color: var(--muted); }
+
+.faq dl { margin: 0; display: grid; gap: 18px; }
+.faq dt { font-weight: 650; }
+.faq dd { margin: 2px 0 0; max-width: 56ch; color: var(--muted); }
+
+.posts { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
 .posts li { display: grid; gap: 2px; }
-.posts li a { color: var(--ink); font-weight: 700; text-decoration: none; }
-.posts li a:hover { color: var(--accent); }
-.posts li span { color: var(--muted); max-width: 52ch; }
-.more { display: inline-block; margin-top: 16px; font-weight: 700; }
+.posts li a { color: var(--ink); font-weight: 650; text-decoration: none; }
+.posts li a:hover { color: var(--accent); text-decoration: underline; }
+.posts li span { max-width: 56ch; color: var(--muted); }
+
+.more { display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; font-weight: 650; }
+
+/*
+ * ===== Two-column workbench (container 1120px) =====
+ * One grid for the whole page, so the hero, the form, the side column and the lower sections
+ * share edges. Column lines: the form is 420px and the side column starts 72px after it; the
+ * lower sections are two equal halves 72px apart.
+ *   420 | 72 | 32 | 72 | 524
+ * The side column spans the flexible third row, so a tall result grows that row, not the hero's.
+ */
+@media (min-width: 960px) {
+  .home {
+    display: grid;
+    grid-template-columns: 420px 72px 32px 72px minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    align-items: start;
+  }
+  .hero { grid-column: 1; grid-row: 1; margin-top: 20px; }
+  .tool { grid-column: 1; grid-row: 2; }
+  .side { grid-column: 3 / -1; grid-row: 1 / span 3; margin-top: 20px; }
+  .side > * { margin-top: 0; }
+  .lowerItem:nth-child(odd of .lowerItem) { grid-column: 1 / 4; }
+  .lowerItem:nth-child(even of .lowerItem) { grid-column: 5 / 6; }
+  /*
+   * Before a plan, How it works sits beside the form and three sections are left below: the long
+   * Questions list spans two rows on the right, so From the blog tucks under Why instead of
+   * leaving a hole. A spanning item's extra height is shared between the rows it spans, so the
+   * Why row is held to its own content (minmax(min-content, 0) can't grow) and the blog row takes
+   * the rest of the Questions list.
+   */
+  .home:not(:has(.stepsBelow)) { grid-auto-rows: minmax(min-content, 0) auto; }
+  .home:not(:has(.stepsBelow)) .faq { grid-row: span 2; }
+}
+/*
+ * Once there's a plan, How it works moves below the result and four sections are left: the same idea, with the
+ * Questions list on the right across three rows and How it works, Why and From the blog stacked on the left.
+ * Not at 960–1023px: there the right column is so narrow that the Questions list outgrows the left stack.
+ */
+@media (min-width: 1024px) {
+  .home:has(.stepsBelow) { grid-auto-rows: minmax(min-content, 0) minmax(min-content, 0) auto; }
+  .home:has(.stepsBelow) .faq { grid-column: 5 / 6; grid-row: 4 / span 3; }
+  .home:has(.stepsBelow) .lowerItem:not(.faq) { grid-column: 1 / 4; }
+}

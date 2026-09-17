@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { splitAmount } from '../lib/split';
+import { splitAmount } from '../lib/split.ts';
 
 test('amount at or below the threshold is a single chunk', () => {
   assert.deepEqual(splitAmount(1999), [1999]);
@@ -34,4 +34,10 @@ test('invalid totals throw RangeError', () => {
 test('invalid threshold throws RangeError', () => {
   assert.throws(() => splitAmount(100, 0), RangeError);
   assert.throws(() => splitAmount(100, -5), RangeError);
+});
+
+test('amounts under half a paisa throw rather than looping', () => {
+  assert.throws(() => splitAmount(1, 0.004), RangeError);
+  assert.throws(() => splitAmount(0.004), RangeError);
+  assert.deepEqual(splitAmount(0.005, 0.005), [0.01]);
 });

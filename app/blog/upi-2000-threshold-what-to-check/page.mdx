@@ -1,45 +1,52 @@
-import { PostLayout, postMetadata } from '@/components/PostLayout';
-import Link from 'next/link';
+import { postLayout, postMetadata } from '@/components/blog/PostShell'
 
-export const metadata = postMetadata('upi-2000-threshold-what-to-check');
+export const metadata = postMetadata('upi-2000-threshold-what-to-check')
 
-<PostLayout slug="upi-2000-threshold-what-to-check">
+export default postLayout('upi-2000-threshold-what-to-check')
 
-"₹2000" comes up a lot in UPI news — as a cap on a benefit, the start of a fee, or a reporting line. Before you change how you pay, check which one is actually in force for you today.
+<Lede>"₹2000" comes up a lot in UPI news: as a cap on a benefit, the start of a fee, or a limit on a single payment. Before you change how you pay, check which one is actually in force for you today.</Lede>
 
-> This page deliberately doesn't state the current rule. Rules have been proposed, denied, revised and staggered by merchant size more than once. The only reliable sources are the ones below.
+<Callout>
+This page deliberately doesn't state the current rule. Rules like these can be revised, and a page like this can fall behind. The only reliable sources are the ones below.
+</Callout>
 
 ## Who actually sets UPI rules
 
-- **NPCI** runs UPI. Its circulars set limits, fees and merchant categories. [npci.org.in](https://www.npci.org.in/)
-- **RBI** sets the policy NPCI operates under, including anything about charges on digital payments. [rbi.org.in](https://www.rbi.org.in/)
-- **Ministry of Finance / CBIC** decide tax questions such as GST. A rumour about "tax on UPI" is only real once it appears in a notification or a press release from them. [pib.gov.in](https://pib.gov.in/)
+- **NPCI** runs UPI. Its circulars set limits, fees and merchant categories ([npci.org.in](https://www.npci.org.in/)). On 15 September 2026 it published FAQs titled *Merchant Discount Rate (MDR) on Select UPI (P2M) Transactions* ([PDF](https://www.npci.org.in/uploads/FA_Qs_Merchant_Discount_Rate_MDR_on_Select_UPI_P2_M_Transactions_58dba1d39e.pdf)).
+- **RBI** sets the policy NPCI operates under, including anything about charges on digital payments ([rbi.org.in](https://www.rbi.org.in/)).
+- **Ministry of Finance / CBIC** decide tax questions such as GST. A rumour about "tax on UPI" is only real once it appears in a notification or a press release from them ([pib.gov.in](https://pib.gov.in/)). For rumours, there's [PIB Fact Check](https://factcheck.pib.gov.in/) (step 1 below).
 - **Your bank and your UPI app** tell you what they charge *you*, if anything. Look for a "charges" or "fees" page in the app.
+
+NPCI's FAQs also say where to verify official updates on UPI charges (question 21).
 
 ## Three different things "₹2000" can mean
 
-### 1. A fee charged to the merchant
+### 1. A fee on the shop (MDR)
 
-Some proposals attach a merchant discount rate (MDR) to UPI payments above a threshold, usually only for large merchants. The customer is not charged directly. Whether a shop passes it on is between you and the shop.
+A merchant discount rate is a fee a shop pays its bank on the payments it receives. NPCI's September 2026 FAQs cover who it applies to, from when, how small shops are treated and whether a shop can pass it on to you (questions 5, 15, 23–26 and 34). Read the answers there rather than in a forward: they can be revised. If you're the merchant, see [what merchants can do](/use-cases/#merchants).
 
-### 2. A charge to the customer
+### 2. A charge on you, the customer
 
-This is the version that spreads fastest on WhatsApp and has, so far, been denied each time it surfaced. Treat it as false until you can find the notification.
+This is the version that spreads fastest on WhatsApp. NPCI's FAQs ask it directly (question 15: "Will ordinary consumers be charged for making payments via UPI?"). For any newer claim, check whether PIB Fact Check has covered it (step 1 below), or look for an NPCI, RBI or PIB release, before you believe or forward it. For what a charge on you would and wouldn't change, see [who a charge lands on, with a worked example](/blog/does-splitting-upi-save-money/).
 
 ### 3. A limit on a benefit
 
-Some incentive schemes for small merchants apply only to transactions up to ₹2,000. Above that, nothing is charged — the merchant simply doesn't get the incentive.
+Some government incentive schemes for small merchants, [such as one for low-value BHIM-UPI payments](https://www.pib.gov.in/PressReleasePage.aspx?PRID=2112771), have covered only UPI payments up to ₹2,000. Whether one is running now, and what it covers, is announced on [pib.gov.in](https://pib.gov.in/).
 
-## A ten-second check before you split
+## Can a shop add a fee to my UPI bill?
 
-1. Search the exact rumour plus the words *"PIB fact check"*. The government's fact-check unit answers most of these within a day.
-2. Open your UPI app's fees page. If it charges you nothing above ₹2,000, splitting saves you nothing.
-3. Ask the merchant. If a fee applies to them, they'll know, and they may prefer split payments — or not.
+NPCI's FAQs answer this for the merchant fee (question 34). If a shop asks for extra on a UPI payment, ask which rule they mean and check it there.
 
-## If a per-transaction charge does apply
+## A quick check before you change how you pay
 
-Then splitting into parts under the threshold is a legitimate way to pay, in the same way that buying two items in two bills is. <Link href="/">TukdaPay</Link> does the arithmetic and hands each part to your UPI app; set **Max per payment** to whatever figure the rule actually names.
+1. See whether PIB Fact Check has already covered the rumour. It posts its checks on its [Telegram channel](https://t.me/PIB_FactCheck) (linked from its portal) and [on X](https://x.com/PIBFactCheck). If it hasn't, you can send it the claim through its [portal](https://factcheck.pib.gov.in/).
+2. Open your UPI app's fees or charges page, or ask your bank. That's where a charge on *you* would be listed. NPCI's FAQs also answer whether UPI apps can add a platform fee (question 17).
+3. Ask the merchant. If a fee applies to them, they'll know — and if you're thinking of paying in parts, ask the shop before you split.
 
-<Link className="btn btn-primary" href="/">Open TukdaPay</Link>
+## If you do need to pay in parts
 
-</PostLayout>
+When a payment won't go through in one go, or the shop asks for it in parts, splitting the bill is one way to pay. Ask the shop first. [TukdaPay's UPI payment splitter](/) does the arithmetic and hands each part to your UPI app; set **Max per payment** to whatever figure actually applies to you.
+
+If a payment above ₹2,000 isn't going through at all, start with [what to check when you can't pay more than ₹2,000 on UPI](/blog/cant-pay-more-than-2000-upi/).
+
+<Cta href="/">Split a payment in TukdaPay</Cta>

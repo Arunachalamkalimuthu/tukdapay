@@ -1,11 +1,44 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
+import { TukdaStrip } from '@/components/TukdaStrip';
+import s from './not-found.module.css';
+
+export const metadata: Metadata = {
+  title: 'Page not found',
+  description: 'This page doesn’t exist on TukdaPay. Split a UPI payment, see use cases or read the blog instead.',
+  // Next adds <meta name="robots" content="noindex"> to 404 pages itself; null only drops the
+  // layout's "index, follow" so the two don't contradict each other.
+  robots: null,
+  // Don't inherit the home page's canonical and og:url: this page is served for every unknown path.
+  alternates: { canonical: null },
+  openGraph: null,
+  // Nobody shares a 404, and the layout's large-image card has no image here.
+  twitter: null,
+};
 
 export default function NotFound() {
   return (
     <div className="page">
-      <h1 style={{ fontSize: 34, fontWeight: 800 }}>That page isn&apos;t here</h1>
-      <p className="muted" style={{ maxWidth: '42ch' }}>The link may be old or mistyped. The splitter is on the home page.</p>
-      <Link className="btn btn-primary" href="/">Open the splitter</Link>
+      {/* A bill with one piece missing, "404" in the gap. Decorative, so the status is also written out. */}
+      <TukdaStrip variant="missing" className={s.strip} />
+      <p className="sr-only">Error 404</p>
+      <h1 className={s.title}>We couldn’t find that page</h1>
+      <p className={s.lead}>
+        The link may be old or have a typo. If you came to split a bill, the splitter is one tap away.
+      </p>
+      <div className={s.actions}>
+        <Link className={`btn btn-primary ${s.primary}`} href="/">
+          Split a payment
+        </Link>
+        <nav className={s.more} aria-label="Other pages">
+          <Link className="btn btn-secondary" href="/use-cases/">
+            Use cases
+          </Link>
+          <Link className="btn btn-secondary" href="/blog/">
+            Blog
+          </Link>
+        </nav>
+      </div>
     </div>
   );
 }

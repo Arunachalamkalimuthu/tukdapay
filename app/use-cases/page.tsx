@@ -1,74 +1,152 @@
-import type { Metadata } from 'next';
 import Link from 'next/link';
-import { useCases } from '@/content/useCases';
-import { splitAmount } from '@/lib/split';
-import { formatInr } from '@/lib/format';
 import { JsonLd } from '@/components/JsonLd';
-import { SITE_URL } from '@/lib/site';
+import { TukdaStrip } from '@/components/TukdaStrip';
+import { posts } from '@/content/posts';
+import { tryHref, useCases } from '@/content/useCases';
+import { formatRupees } from '@/lib/format';
+import { pageMetadata } from '@/lib/metadata';
+import { ogCards, ogImage } from '@/lib/og';
+import { DEFAULT_MAX, SITE_URL } from '@/lib/site';
+import { splitAmount } from '@/lib/split';
+import { collapseText } from '@/lib/strip';
 import s from './page.module.css';
 
-export const metadata: Metadata = {
-  title: 'Use cases: where splitting a UPI payment helps',
+// ₹2000 without a comma in the title and description, the way people search for it; the page itself groups it.
+export const metadata = pageMetadata({
+  title: 'Split UPI bills above ₹2000: 8 everyday examples',
   description:
-    'Kirana bills, restaurant tables, phones, pharmacy, coaching fees, wedding vendors, hotels, repairs — real situations where a UPI bill above ₹2000 is easier paid in parts.',
-  alternates: { canonical: '/use-cases/' },
-  openGraph: { url: '/use-cases/', title: 'Where splitting a UPI payment helps', description: 'Eight everyday situations, with the split worked out.' },
-};
+    'Kirana, restaurant, pharmacy, tuition, hotel and more: eight bills above ₹2000 split into UPI payments of ₹1,999 or less, with the exact parts for each.',
+  path: '/use-cases/',
+  image: ogImage(ogCards(posts).find((c) => c.key === 'use-cases')!),
+});
 
-const short = (n: number) => formatInr(n).replace('.00', '');
+const scenarios = useCases.map((u) => ({ ...u, parts: splitAmount(u.amount, DEFAULT_MAX) }));
 
 export default function UseCasesPage() {
   return (
-    <div className="page wide">
+    <div className="page">
       <JsonLd
         data={{
           '@context': 'https://schema.org',
           '@type': 'ItemList',
-          name: 'TukdaPay use cases',
-          itemListElement: useCases.map((u, i) => ({ '@type': 'ListItem', position: i + 1, name: u.title, url: `${SITE_URL}/use-cases/#${u.slug}` })),
+          name: 'Bills people split into smaller UPI payments',
+          url: `${SITE_URL}/use-cases/`,
+          numberOfItems: scenarios.length,
+          itemListElement: scenarios.map((u, i) => ({
+            '@type': 'ListItem',
+            position: i + 1,
+            name: u.title,
+            description: u.story,
+            url: `${SITE_URL}/use-cases/#${u.slug}`,
+          })),
         }}
       />
-      <h1 style={{ fontSize: 34, fontWeight: 800 }}>Where splitting a UPI payment helps</h1>
-      <p className={s.intro}>
-        Eight everyday situations where the bill crosses ₹2,000 and paying in parts is simpler. Each card has the split
-        worked out at the ₹1,999 default — tap <strong>Try</strong> to open it in the splitter with the amount filled in.
-      </p>
 
-      <ul className={s.grid}>
-        {useCases.map((u) => {
-          const parts = splitAmount(u.amount);
-          return (
-            <li key={u.slug} id={u.slug} className={s.card}>
-              <span className={s.who}>{u.who}</span>
-              <h2>{u.title}</h2>
-              <div className={s.split} aria-label={`${short(u.amount)} splits into ${parts.length} payments`}>
-                <span>{short(u.amount)}</span>
-                <span className={s.op} aria-hidden="true">→</span>
-                {parts.map((p, i) => (
-                  <span key={i} style={{ display: 'contents' }}>
-                    <span className={`${s.chip} ${i === parts.length - 1 ? s.last : ''}`}>{short(p)}</span>
-                    {i < parts.length - 1 && <span className={s.op} aria-hidden="true">+</span>}
-                  </span>
-                ))}
-              </div>
-              <p>{u.story}</p>
-              <p className={s.tip}>{u.tip}</p>
-              <Link className={`btn btn-secondary ${s.try}`} href={`/?amount=${u.amount}&note=${encodeURIComponent(u.title)}`}>
-                Try with {short(u.amount)}
-              </Link>
+      <header className={s.intro}>
+        <h1>Bills people pay in tukde</h1>
+        <p>
+          Tukde means pieces: one bill paid as a few smaller UPI payments. Corner shops, chemists, tutors and homestays
+          often take only UPI, and plenty of everyday bills cross ₹2,000. Splitting is one way to pay when one payment
+          won’t go through, or when the shop asks for it. Ask the shop before you split.
+        </p>
+        <p>
+          Here are eight of these bills, each with the exact split TukdaPay makes at {formatRupees(DEFAULT_MAX)} a
+          payment. Pick one to open the splitter with that amount filled in. New to this? Read{' '}
+          <Link href="/blog/split-upi-payment-above-2000/">how to split a UPI payment above ₹2,000</Link>, step by step.
+        </p>
+      </header>
+
+      {/* An index, like a price list: the kind of bill, dot leaders, then its total.
+          role="list" because Safari drops list semantics from lists styled without bullets. */}
+      <nav className={s.index} aria-label="Jump to a use case">
+        <ul role="list">
+          {scenarios.map((u) => (
+            <li key={u.slug}>
+              <a href={`#${u.slug}`}>
+                <span className={s.indexName}>{u.who}</span>{' '}
+                <span className={s.leader} aria-hidden="true" />{' '}
+                <span className={`money ${s.indexTotal}`}>{formatRupees(u.amount)}</span>
+              </a>
             </li>
+          ))}
+        </ul>
+      </nav>
+
+      <div className={s.cases}>
+        {scenarios.map((u) => {
+          const count = u.parts.length;
+          const total = formatRupees(u.amount);
+          return (
+            <article key={u.slug} id={u.slug} className={s.case} aria-labelledby={`${u.slug}-title`}>
+              <div className={s.caseHead}>
+                <h2 id={`${u.slug}-title`}>{u.title}</h2>
+                <p className={`t-money ${s.caseTotal}`}>{total}</p>
+              </div>
+              <p className={s.who}>{u.who}</p>
+              <p className={s.story}>{u.story}</p>
+
+              {/* The split as a slip. The strip is decorative, so the figures are also written out for screen readers. */}
+              <div className={s.slip}>
+                <p className={s.slipHead}>
+                  <span className={`money ${s.slipTotal}`}>{total}</span>{' '}
+                  {count === 1 ? 'in 1 payment' : `in ${count} payments`}
+                  <span className="sr-only">: {collapseText(u.parts)}</span>
+                </p>
+                <TukdaStrip variant="slip" parts={u.parts} />
+              </div>
+
+              <p className={s.tip}>
+                <strong>Tip:</strong> {u.tip}
+              </p>
+
+              <Link className={`btn btn-outline ${s.action}`} href={tryHref(u)}>
+                <span>
+                  Try with <span className="money">{total}</span>
+                </span>
+              </Link>
+            </article>
           );
         })}
-      </ul>
+      </div>
 
-      <section className={s.merchants} aria-labelledby="merchants-title">
-        <h2 id="merchants-title" style={{ fontSize: 22, fontWeight: 800, marginBottom: 12 }}>If you&apos;re the merchant</h2>
-        <ul>
-          <li><strong>Say yes or no up front.</strong> A sign at the counter (“Split UPI payments welcome” or “One payment per bill”) saves a conversation.</li>
-          <li><strong>Look for the part numbers.</strong> TukdaPay tags every payment <em>Part 1/3</em>, <em>Part 2/3</em>… in the note, so matching them to one bill is a glance.</li>
-          <li><strong>Ask for the breakdown.</strong> Customers can send the list on WhatsApp in one tap; keep it with the bill.</li>
-          <li><strong>Check what applies to you.</strong> Some rules attach a charge to the merchant, not the customer. <Link href="/blog/upi-2000-threshold-what-to-check/">Here&apos;s how to check.</Link></li>
+      {/* Posts link this section as /use-cases/#merchants or by its heading, #merchants-title, so keep both ids.
+          The heading's scroll margin (page.module.css) lands both in the same place; test/pages.test.ts checks. */}
+      <section id="merchants" className={s.merchants} aria-labelledby="merchants-title">
+        <h2 id="merchants-title">If you’re the merchant</h2>
+        <ul role="list">
+          <li>
+            <strong>Say yes or no up front.</strong> A sign at the counter (“Split UPI payments welcome” or “One
+            payment per bill”) saves a conversation.
+          </li>
+          <li>
+            <strong>Look for the part numbers.</strong> TukdaPay tags every payment <em>Part 1/3</em>,{' '}
+            <em>Part 2/3</em>… in the note, so matching them to one bill is a glance.
+          </li>
+          <li>
+            <strong>Ask for the breakdown.</strong> Customers can send the list on WhatsApp in one tap; keep it with
+            the bill.
+          </li>
+          <li>
+            <strong>Check what applies to you.</strong> If a payment carries a charge, it may fall on you rather than
+            the customer. Here’s{' '}
+            <Link href="/blog/upi-2000-threshold-what-to-check/">how to check what applies to a UPI payment above ₹2,000</Link>.
+          </li>
         </ul>
+      </section>
+
+      <section className={s.cta} aria-labelledby="own-bill-title">
+        <h2 id="own-bill-title">Your bill isn’t on the list?</h2>
+        <p>
+          Any amount works. Enter the bill and the shop’s UPI ID, then pay each part from GPay, PhonePe, Paytm
+          or any UPI app.
+        </p>
+        <p>
+          TukdaPay isn’t a way to avoid a fee:{' '}
+          <Link href="/blog/does-splitting-upi-save-money/">see who a UPI charge lands on</Link>.
+        </p>
+        <Link className={`btn btn-primary ${s.action}`} href="/">
+          Split a payment
+        </Link>
       </section>
     </div>
   );

@@ -1,0 +1,177 @@
+/*
+ * The tukda strip. Pieces are flex items: flex-grow is the part's share of the bill, and a
+ * minimum width keeps a ₹2 remainder visible (capped so the pieces can never overflow the strip).
+ * --gap, --min and --count come from lib/strip.ts via inline style.
+ */
+.strip {
+  --h: 14px;   /* piece height */
+  --lift: 0px; /* how much taller the next piece is */
+  min-width: 0;
+}
+.progress { --lift: 6px; }
+.progress[data-labels] { --h: 28px; }
+.missing { --h: 28px; }
+
+.bar {
+  display: flex;
+  align-items: flex-end; /* the taller next piece grows upwards */
+  gap: var(--gap);
+  height: calc(var(--h) + var(--lift));
+}
+
+.piece,
+.figure {
+  flex: 1 1 0px;
+  min-width: min(var(--min), calc((100% - (var(--count) - 1) * var(--gap)) / var(--count)));
+}
+
+.piece {
+  --fill: var(--accent);
+  --edge: var(--accent);
+  --on: var(--accent-ink);
+  position: relative;
+  container-type: inline-size;
+  overflow: hidden;
+  height: var(--h);
+  border: 1.5px solid var(--edge);
+  border-radius: var(--radius-sm);
+  background-color: var(--fill);
+  color: var(--on);
+}
+
+/* A continuous bar (more than 24 parts): runs touch, only the ends are rounded. */
+.strip[data-mode='continuous'] .piece { border-radius: 0; }
+.strip[data-mode='continuous'] .piece:first-child { border-start-start-radius: var(--radius-sm); border-end-start-radius: var(--radius-sm); }
+.strip[data-mode='continuous'] .piece:last-child { border-start-end-radius: var(--radius-sm); border-end-end-radius: var(--radius-sm); }
+
+/* ghost: the example, drawn but not real */
+.ghost .piece { --fill: transparent; --edge: var(--field); border-style: dashed; }
+
+/* progress: fill versus hollow and the taller next piece carry the state, not only the colour */
+.progress .paid { --fill: var(--paid); --edge: var(--paid); --on: var(--paid-ink); }
+/* The extra height goes on top, so its label shares a baseline with the other pieces. */
+.progress .next { height: calc(var(--h) + var(--lift)); padding-top: var(--lift); }
+.progress .later { --fill: transparent; --edge: var(--accent); --on: var(--accent); }
+
+/* missing: the middle piece is a dashed hole */
+.missing .hole { --fill: transparent; --edge: var(--field); --on: var(--muted); border-style: dashed; }
+
+/* ---- Ticks and labels inside pieces ---- */
+
+/* Centred in the piece; hidden when the piece is narrower than 16px. */
+.tick {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 9px;
+  height: 9px;
+  color: var(--on);
+}
+.strip[data-labels] .tick { width: 12px; height: 12px; }
+@container (width < 13px) {
+  .tick { display: none; }
+}
+
+/*
+ * The label shows only when it fits: the zero-width ::before holds the first line, so a label
+ * wider than the piece wraps to a second line, which the fixed height clips. It is painted over
+ * the centred tick, with the piece's fill behind it, so a paid piece too narrow for its label
+ * still shows the tick.
+ */
+.fit {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding-inline: 2px;
+  overflow: hidden;
+}
+.fit::before { content: ''; width: 0; height: 100%; }
+.label {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding-inline: 2px;
+  color: var(--on);
+  font-size: var(--text-tick);
+  font-weight: 650;
+  line-height: 1;
+  font-stretch: var(--money-width);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* Only a paid piece has a tick underneath to cover. */
+.paid .label { background-color: var(--fill); }
+.labelTick { width: 10px; height: 10px; flex: none; }
+.missing .label { font-weight: 600; font-stretch: normal; }
+
+/* ---- Figures under the pieces, or one summary line ---- */
+
+.figures { display: flex; gap: var(--gap); margin-top: 7px; }
+.figure { display: flex; white-space: nowrap; }
+/* The last figure ends where the strip ends, however narrow its piece. */
+.figure:last-child:not(:first-child) { justify-content: flex-end; }
+
+.figure,
+.summary {
+  font-size: var(--text-tick);
+  font-weight: 600;
+  line-height: 1.2;
+  font-stretch: var(--money-width);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.summary { margin: 7px 0 0; }
+.ghost .figure,
+.ghost .summary { color: var(--muted); font-weight: 500; }
+
+/* ---- Motion ---- */
+
+@media (prefers-reduced-motion: no-preference) {
+  .preview .piece,
+  .preview .figure,
+  .progress .piece {
+    transition:
+      flex-grow var(--duration-feedback) ease,
+      height var(--duration-feedback) ease,
+      background-color var(--duration-feedback) ease,
+      border-color var(--duration-feedback) ease,
+      color var(--duration-feedback) ease;
+  }
+  .progress .label { transition: background-color var(--duration-feedback) ease, color var(--duration-feedback) ease; }
+
+  /* The cut: one whole magenta bar whose cuts open and whose pieces settle into their states. */
+  .cut .bar { animation: open var(--duration-cut) var(--ease-cut) backwards; }
+  .cut .piece,
+  .cut .paid .label { animation: settle var(--duration-cut) var(--ease-cut) backwards; }
+  .cut .label { animation: settle-ink var(--duration-cut) var(--ease-cut) backwards; }
+  .cut .tick,
+  .cut .labelTick { animation: appear var(--duration-cut) var(--ease-cut) backwards; }
+}
+@keyframes open {
+  from { gap: 0; }
+}
+@keyframes settle {
+  from { background-color: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+}
+@keyframes settle-ink {
+  from { color: var(--accent-ink); }
+}
+@keyframes appear {
+  from { opacity: 0; }
+}
+
+/* ---- Forced colours: outlines for every piece; the tick marks paid, height marks next ---- */
+
+@media (forced-colors: active) {
+  .piece { border-color: CanvasText; }
+  .tick,
+  .label,
+  .figure,
+  .summary { color: CanvasText; }
+  .label { background-color: Canvas; }
+}

@@ -1,10 +1,10 @@
-import { PostLayout, postMetadata } from '@/components/PostLayout';
+import { postLayout, postMetadata } from '@/components/blog/PostShell'
 
-export const metadata = postMetadata('how-upi-deep-links-work');
+export const metadata = postMetadata('how-upi-deep-links-work')
 
-<PostLayout slug="how-upi-deep-links-work">
+export default postLayout('how-upi-deep-links-work')
 
-Every "Pay" button in TukdaPay is a plain link. This is what's in it and why a web page can build one but can't see what happens next.
+<Lede>Every "Pay" button in [TukdaPay's UPI payment splitter](/) is a plain link. This is what's in it and why a web page can build one but can't see what happens next.</Lede>
 
 ## The URL
 
@@ -12,16 +12,18 @@ Every "Pay" button in TukdaPay is a plain link. This is what's in it and why a w
 upi://pay?pa=shop@okaxis&pn=Sri%20Tea%20Stall&am=1999.00&cu=INR&tn=Part%201%2F3
 ```
 
-| Param | Meaning               | Notes                                        |
-| ----- | --------------------- | -------------------------------------------- |
-| `pa`  | Payee address (VPA)   | Required. `name@handle`.                     |
-| `pn`  | Payee name            | Shown in the app. Optional.                  |
-| `am`  | Amount                | Two decimals. Most apps lock it when present. |
-| `cu`  | Currency              | Always `INR`.                                |
-| `tn`  | Transaction note      | Free text, shown to both sides.              |
-| `tr`  | Transaction reference | Merchant reference id. Optional.             |
+| Param | Meaning               | Notes                                          |
+| ----- | --------------------- | ---------------------------------------------- |
+| `pa`  | Payee address (VPA)   | Required. `name@handle`.                       |
+| `pn`  | Payee name            | Shown in the app. Optional.                    |
+| `am`  | Amount                | Two decimals. Most apps lock it when present.  |
+| `cu`  | Currency              | Always `INR`.                                  |
+| `tn`  | Transaction note      | Free text, shown to both sides.                |
+| `tr`  | Transaction reference | Merchant reference id. Optional.               |
 
 Values are URL-encoded. The scheme is defined in NPCI's UPI Linking Specification; the parameters above are the ones every mainstream app honours.
+
+On Android the app opens through an intent, which is why developers also call this a UPI intent link.
 
 ## What happens on tap
 
@@ -36,24 +38,28 @@ Step 4 never reports back to the page. There is no callback, no return URL, no e
 
 ## QR codes are the same link
 
-A UPI QR sticker is just this URL encoded as a QR. TukdaPay renders one per part on desktop using the `qrcode` library, so a phone can scan what it can't tap.
+A UPI QR sticker is just this URL encoded as a QR. TukdaPay renders one per part on desktop using the `qrcode` library, so a phone can scan what it can't tap. To see these links from the payer's side, read [how to split a UPI payment above ₹2,000](/blog/split-upi-payment-above-2000/).
 
 ## Building one
 
 ```ts
+export interface UpiParams {
+  pa: string;
+  pn?: string;
+  am: number;
+  tn?: string;
+}
+
 export function buildUpiUrl({ pa, pn, am, tn }: UpiParams): string {
   const params: [string, string][] = [['pa', pa]];
-  if (pn) params.push(['pn', pn]);
+  if (pn && pn.trim()) params.push(['pn', pn.trim()]);
   params.push(['am', am.toFixed(2)], ['cu', 'INR']);
-  if (tn) params.push(['tn', tn]);
-  return 'upi://pay?' + params
-    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
-    .join('&');
+  if (tn && tn.trim()) params.push(['tn', tn.trim()]);
+
+  return `upi://pay?${params.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')}`;
 }
 ```
 
 That's the whole of `lib/upi.ts`, minus validation. The tests are in the [repository](https://github.com/Arunachalamkalimuthu/tukdapay).
 
-<a className="btn btn-primary" href="https://github.com/Arunachalamkalimuthu/tukdapay">Read the source</a>
-
-</PostLayout>
+<Cta href="https://github.com/Arunachalamkalimuthu/tukdapay">Read the source</Cta>

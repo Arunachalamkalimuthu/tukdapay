@@ -5,11 +5,29 @@ import styles from './SiteFooter.module.css';
 export function SiteFooter() {
   return (
     <footer className={styles.foot}>
-      <p>
-        TukdaPay is a free, open-source tool. It doesn&apos;t move money and can&apos;t see whether a payment went
-        through. <a href={REPO_URL}>Source on GitHub</a> · <Link href="/use-cases/">Use cases</Link> ·{' '}
-        <Link href="/blog/">Blog</Link> · <a href="/blog/feed.xml">RSS</a>
-      </p>
+      <div className={styles.inner}>
+        <p>
+          TukdaPay is a free, open-source tool. It doesn&apos;t move money and can&apos;t see whether a payment went
+          through.
+        </p>
+        <ul className={styles.links}>
+          <li>
+            <a href={REPO_URL}>Source on GitHub</a>
+          </li>
+          <li>
+            <Link href="/use-cases/">Use cases</Link>
+          </li>
+          <li>
+            <Link href="/blog/">Blog</Link>
+          </li>
+          <li>
+            <Link href="/about/">About</Link>
+          </li>
+          <li>
+            <a href="/blog/feed.xml">RSS</a>
+          </li>
+        </ul>
+      </div>
     </footer>
   );
 }
