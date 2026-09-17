@@ -1,0 +1,13 @@
+/* About: a wide page (640px, the default --container) set like a blog post, with a display title. */
+.about { overflow-wrap: break-word; padding-top: 16px; }
+.about h1 { margin: 0 0 12px; }
+.about h2 { margin: 40px 0 10px; }
+.about p { margin: 0 0 14px; max-width: var(--measure); text-wrap: pretty; }
+.about .lede { color: var(--muted); margin: 0; }
+
+.about code {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  padding: 1px 5px; white-space: nowrap;
+}
+
+.about .cta { margin: 32px 0 0; }
