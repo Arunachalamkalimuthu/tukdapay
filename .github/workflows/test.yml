@@ -26,3 +26,5 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
+      - name: Check the export
+        run: npm run check:export
