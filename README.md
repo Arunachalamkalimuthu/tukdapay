@@ -35,8 +35,9 @@ your money; it only builds `upi://pay` links.
 - **Pay bar.** Once you split, a bar pinned to the bottom of the screen
   shows your progress as a strip, how much is left and a button for the next
   part.
-- **Resume banner.** Come back to an unfinished split and a banner says
-  which part is next, with a link to the payments.
+- **Resume banner.** On a phone or narrow screen, coming back to an
+  unfinished split shows a banner that says which part is next, with a link
+  to the payments.
 - **Desktop workbench.** On a wide screen with a mouse, every part gets a QR
   code and the next action reads "Scan part 2 of 3". From 960px wide, the form
   and the result sit side by side.
@@ -45,21 +46,15 @@ your money; it only builds `upi://pay` links.
   in your browser.
 - **Prefill links** that fill in the form for someone else (see below).
 - **Questions and answers** on the home page.
-- **[Use cases](https://tukdapay.com/use-cases/).** Eight everyday bills with
-  the exact parts for each, a "Try with ₹X" link that opens the splitter with
-  the amount and a note filled in, and a section for shops.
-- **[Blog](https://tukdapay.com/blog/)** with six plain-language guides and an
-  [RSS feed](https://tukdapay.com/blog/feed.xml):
-  - [how to split a UPI payment above ₹2,000](https://tukdapay.com/blog/split-upi-payment-above-2000/), step by step
-  - [what to check when a UPI payment above ₹2,000 won't go through](https://tukdapay.com/blog/cant-pay-more-than-2000-upi/)
-  - [how to check which UPI charges apply](https://tukdapay.com/blog/upi-2000-threshold-what-to-check/), and where NPCI, RBI and PIB publish them
-  - [what to do when a RuPay credit card on UPI says a ₹2,000 limit has been reached](https://tukdapay.com/blog/rupay-credit-card-upi-2000-limit/)
-  - [who a UPI charge lands on](https://tukdapay.com/blog/does-splitting-upi-save-money/), with a worked example
-  - [the `upi://pay` link format](https://tukdapay.com/blog/how-upi-deep-links-work/), for developers
+- **[Use cases](https://tukdapay.com/use-cases/).** Everyday bills with the
+  exact parts for each, a "Try with ₹X" link that opens the splitter with the
+  amount and a note filled in, and a section for shops.
+- **[Blog](https://tukdapay.com/blog/)** with plain-language guides, such as
+  [how to split a UPI payment above ₹2,000](https://tukdapay.com/blog/split-upi-payment-above-2000/)
+  and [the `upi://pay` link format](https://tukdapay.com/blog/how-upi-deep-links-work/),
+  plus an [RSS feed](https://tukdapay.com/blog/feed.xml).
 - **[About](https://tukdapay.com/about/).** Who builds TukdaPay, how it's
   funded (it isn't), what it keeps in your browser and how to get in touch.
-- **Share cards.** Each post, the blog, use cases and About get their own
-  link preview image, made at build time.
 
 ## Prefill links
 
@@ -105,7 +100,7 @@ Needs Node 22 or newer.
 ```sh
 npm ci
 npm run dev            # http://localhost:3000
-npm test               # node:test tests for lib/ and content/ (via tsx)
+npm test               # node:test tests in test/ (via tsx)
 npm run typecheck      # tsc --noEmit
 npm run lint           # eslint
 npm run build          # static site in out/
@@ -121,7 +116,7 @@ A Next.js App Router app exported as static files (`output: 'export'`).
 app/
   layout.tsx               root layout: home metadata, font, header, footer
   globals.css              design tokens (light + dark), type, buttons, font fallback
-  page.tsx                 home: hero, splitter, how it works, FAQ, posts, JSON-LD
+  page.tsx                 home: hero, splitter, steps, FAQ, latest posts, JSON-LD
   use-cases/page.tsx       /use-cases/
   about/page.tsx           /about/
   blog/page.tsx            /blog/
@@ -137,7 +132,7 @@ components/
   splitter/                Splitter (form and amount), PlanResult (parts and pay bar), QrCode
   TukdaStrip.tsx           the tukda strip: a bill drawn as a bar cut into its parts
   SiteHeader.tsx, SiteFooter.tsx, JsonLd.tsx
-  blog/                    PostShell (post page and metadata), PostList, PostParts
+  blog/                    post page (PostShell) with its metadata and JSON-LD, PostList, PostParts
 content/
   posts.ts                 blog post list: slug, title, description, dates
   useCases.ts              use case scenarios
@@ -157,19 +152,21 @@ lib/                       pure logic, no React
   metadata.ts              pageMetadata() for every page except home
   schema.ts                JSON-LD builders
   og.ts                    share card list and title fitting
-  site.ts                  site URL, name, repo link, default max per payment
+  site.ts                  site-wide constants such as the URL, name, repo link and default max per payment
 scripts/
   check-export.mjs         npm run check:export
 assets/fonts/              Bricolage Grotesque TTFs for the share cards (OFL.txt)
-test/                      <module>.test.ts for the lib/ modules; content.test.ts for content/ and posts
+test/                      node:test tests: <module>.test.ts for most lib/ modules; the rest check content, posts and pages
 public/                    CNAME, favicon.svg, og.png, icons/
+docs/superpowers/specs/    design specs
+.github/workflows/         test.yml, deploy.yml (see Deployment)
 next.config.ts             static export, trailing slashes, MDX
 mdx-components.tsx         components every post can use
 ```
 
 ## Writing a blog post
 
-1. Add an entry at the top of `content/posts.ts`:
+1. Add an entry to `content/posts.ts`, newest first:
 
    ```ts
    {
@@ -182,15 +179,14 @@ mdx-components.tsx         components every post can use
    ```
 
    - `title` becomes the `<title>` (the layout adds " – TukdaPay"), the H1,
-     the RSS title and the share card text. Keep it to 52 characters or
-     fewer.
+     the title in post lists and the RSS feed, and the share card text. Keep
+     it to 52 characters or fewer.
    - `description` is 70–160 characters.
    - Write ₹2000 without a comma in both; follow the copy rules in
      [CONTRIBUTING.md](CONTRIBUTING.md#copy).
-   - `date` and `updated` are `YYYY-MM-DD`. `updated` is optional: set it
-     only when what the post says changes, never for design or CSS changes.
-     The post then shows the updated date, and its JSON-LD `dateModified`,
-     `article:modified_time` and sitemap `lastmod` use it.
+   - `date` and `updated` are `YYYY-MM-DD`. `updated` is optional: it's the
+     date of the last change to what the post says, so set it only when the
+     words change, never for design or CSS changes.
 
    This list drives the blog index, the home page, the RSS feed, the sitemap
    and the share cards.
@@ -212,11 +208,12 @@ mdx-components.tsx         components every post can use
    build stops if the title uses anything else.
 
 The build fails if the slug is missing from `content/posts.ts`. `npm test`
-checks title and description lengths, ₹2000 in titles and descriptions, that
-the post links the splitter or the use cases, that links to other posts and
-to `/use-cases/#…` sections exist, and that the post doesn't restate NPCI's
-figures. After `npm run build`, `npm run check:export` checks the built page:
-title, description, canonical URL, sitemap entry, share card and JSON-LD.
+checks title and description lengths, that titles and descriptions write
+₹2000 without a comma, that the post links the splitter or the use cases,
+that links to other posts and to `/use-cases/#…` sections exist, and that the
+post doesn't repeat a few known NPCI figures. After `npm run build`,
+`npm run check:export` checks the built page: title, description, canonical
+URL, sitemap entry, share image and JSON-LD.
 
 ## Adding a use case
 
@@ -225,41 +222,51 @@ parts and a "Try with ₹X" link that opens the splitter with the amount filled
 in, and the entry's short `note` too if it has one. `npm test` checks that the
 note is under 30 characters and that the last part isn't under ₹100.
 
+`app/use-cases/page.tsx` writes out how many bills there are in its metadata
+and intro, so update the count there too, and the page's sitemap date if it
+has its own (see [SEO](#seo)).
+
 ## Adding a page
 
 - Export metadata built with `pageMetadata()` from `lib/metadata.ts`, so the
-  page gets its own canonical URL and share tags. The title, with
-  " – TukdaPay" added, is 30–65 characters; the description is 70–160.
-- Add the URL to `app/sitemap.ts`. `npm run check:export` fails if an
-  exported page isn't in the sitemap.
+  page gets its own canonical URL and share tags.
+- Give it a descriptive title. It's also the `og:title`, and a bare "Blog",
+  "Use cases", "About" or "TukdaPay" fails the export check. With
+  " – TukdaPay" added, the title is 30–65 characters. If the title already
+  names TukdaPay, set `title: { absolute: … }` to skip the suffix, as
+  `app/about/page.tsx` does. The description is 70–160 characters.
+- Add the URL to `app/sitemap.ts`, dated by the last change to the page's
+  words. `npm run check:export` fails if an exported page isn't in the
+  sitemap.
 - For its own share card, add an entry to `PAGE_CARDS` in `lib/og.ts` and
-  pass `image: ogImage(card)` to `pageMetadata()`. Otherwise it uses
-  `public/og.png`.
+  pass `image: ogImage(ogCards(posts).find((c) => c.key === '<key>')!)` to
+  `pageMetadata()`. Otherwise it shares `public/og.png`.
 
 ## SEO
 
 - **Generated files.** `/sitemap.xml` (`app/sitemap.ts`), `/robots.txt`
   (`app/robots.ts`, which points to the sitemap) and `/blog/feed.xml` are
   written at build time. Posts come from `content/posts.ts`; other pages are
-  listed in `app/sitemap.ts`.
+  listed in `app/sitemap.ts`. Sitemap dates follow the words, never the build
+  time: posts use their dates in `content/posts.ts`, and a page with its own
+  date gets a new one only when its words change.
 - **Metadata.** Every indexable page has a canonical URL, Open Graph and X
   tags, and a robots meta that allows large image previews. The 404 page is
-  noindex. Home's are in
-  `app/layout.tsx`; other pages use `pageMetadata()`.
-- **Structured data.** Build JSON-LD with `lib/schema.ts` and render it with
-  `<JsonLd>`. Home emits one graph (Organization, WebSite, WebApplication,
-  FAQPage). Posts emit BlogPosting and BreadcrumbList, and name their author
-  on the page to match.
-- **Share cards.** `app/og/[image]/route.tsx` renders a 1200×630 PNG for each
-  post, the blog, use cases and About, using `lib/og.ts` and the fonts in
-  `assets/fonts`. Card text says what the page is, never a fee, rate or limit.
-- **Export check.** `scripts/check-export.mjs` (`npm run check:export`) fails
-  the deploy if an exported page is missing from the sitemap or has the wrong
-  canonical, if a title isn't 30–65 characters or a description 70–160, if a
-  page doesn't have exactly one H1, if a share image is missing or too big, if
-  JSON-LD doesn't parse or points at a missing page, if the 404 page can be
-  indexed, or if the home page's form and "How it works" aren't in the static
-  HTML.
+  noindex. Home's metadata is in `app/layout.tsx`; other pages use
+  `pageMetadata()`.
+- **Structured data.** Render JSON-LD with `<JsonLd>`. Home describes the app
+  and its FAQ; posts have BlogPosting and BreadcrumbList; `/blog/`,
+  `/use-cases/` and `/about/` have Blog, ItemList and AboutPage. Build new
+  JSON-LD with `lib/schema.ts`, so the site's Organization keeps one `@id`.
+- **Share cards.** `app/og/[image]/route.tsx` renders a 1200×630 PNG at build
+  time for each post, the blog, use cases and About, using `lib/og.ts` and the
+  fonts in `assets/fonts`. Card text says what the page is, never a fee, rate
+  or limit.
+- **Export check.** After a build, `npm run check:export` checks each exported
+  page's title, description, `og:title`, canonical URL, sitemap entry, robots
+  meta, H1, share image and JSON-LD, that the 404 page is noindex, and that
+  the home page's form and steps are in the static HTML. CI doesn't deploy if
+  it fails. The full list is at the top of `scripts/check-export.mjs`.
 - **After deploying.** Submit `https://tukdapay.com/sitemap.xml` in Google
   Search Console and Bing Webmaster Tools. For a new or rewritten page, request
   indexing with URL Inspection.
