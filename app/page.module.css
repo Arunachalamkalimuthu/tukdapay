@@ -2,6 +2,14 @@
 .hero { margin: 0 0 24px; min-width: 0; }
 .hero h1 { font-size: var(--text-display); font-weight: 800; letter-spacing: -0.03em; line-height: 1.02; }
 .hero p { margin: 12px 0 0; max-width: 40ch; color: var(--muted); }
+/*
+ * Below 400px, "UPI bill above ₹2,000?" fits the column in Bricolage (357.5px of 358 at 390px) but not in the
+ * Arial or Android Roboto fallbacks (Roboto needs 367.7px), so the H1 would be 3 lines until the web font arrives
+ * and 2 after, moving the page. Breaking after "UPI bill" there gives 3 lines in every font. From 400px the line
+ * fits in all of them; from 960px, at 48px, it wraps in all of them.
+ */
+.narrowBreak { display: none; }
+@media (max-width: 399.98px) { .narrowBreak { display: inline; } }
 
 /* ===== Lower sections: spaced apart, no rules ===== */
 .section { margin-top: var(--section-gap); min-width: 0; }
@@ -60,7 +68,20 @@
   /*
    * Before a plan, How it works sits beside the form and three sections are left below: the long
    * Questions list spans two rows on the right, so From the blog tucks under Why instead of
-   * leaving a hole.
+   * leaving a hole. A spanning item's extra height is shared between the rows it spans, so the
+   * Why row is held to its own content (minmax(min-content, 0) can't grow) and the blog row takes
+   * the rest of the Questions list.
    */
+  .home:not(:has(.stepsBelow)) { grid-auto-rows: minmax(min-content, 0) auto; }
   .home:not(:has(.stepsBelow)) .faq { grid-row: span 2; }
+}
+/*
+ * Once there's a plan, How it works moves below the result and four sections are left: the same idea, with the
+ * Questions list on the right across three rows and How it works, Why and From the blog stacked on the left.
+ * Not at 960–1023px: there the right column is so narrow that the Questions list outgrows the left stack.
+ */
+@media (min-width: 1024px) {
+  .home:has(.stepsBelow) { grid-auto-rows: minmax(min-content, 0) minmax(min-content, 0) auto; }
+  .home:has(.stepsBelow) .faq { grid-column: 5 / 6; grid-row: 4 / span 3; }
+  .home:has(.stepsBelow) .lowerItem:not(.faq) { grid-column: 1 / 4; }
 }
