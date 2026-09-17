@@ -13,11 +13,17 @@ export interface FaqEntry {
 /** NPCI, Merchant Discount Rate (MDR) on Select UPI (P2M) Transactions – FAQs, 15 Sept 2026. */
 export const NPCI_MDR_FAQ_URL =
   'https://www.npci.org.in/uploads/FA_Qs_Merchant_Discount_Rate_MDR_on_Select_UPI_P2_M_Transactions_58dba1d39e.pdf';
-export const PIB_FACT_CHECK_URL = 'https://factcheck.pib.gov.in/';
+/*
+ * Where PIB Fact Check posts its checks. Its portal, factcheck.pib.gov.in, is a login form for sending in a claim,
+ * with no checks to read, so answers link these instead.
+ */
+export const PIB_FACT_CHECK_TELEGRAM_URL = 'https://t.me/PIB_FactCheck';
+export const PIB_FACT_CHECK_X_URL = 'https://x.com/PIBFactCheck';
 
 /*
- * Copy rules for these answers: TukdaPay isn't a way to avoid a fee, so nothing here pitches splitting as one.
- * Answers about limits and charges state no rule, rate, cap or date; they say where to check.
+ * Copy rules for these answers: TukdaPay isn't a way to avoid a fee, so nothing here pitches splitting as one, and
+ * only the charges answer mentions fees or charges at all. Answers about limits and charges state no rule, rate,
+ * cap or date; they say where to check.
  */
 export const faq: FaqEntry[] = [
   {
@@ -34,12 +40,12 @@ export const faq: FaqEntry[] = [
   },
   {
     q: 'Why ₹1,999?',
-    a: 'It keeps each part under ₹2,000, an amount that comes up a lot in UPI news about limits and charges. TukdaPay doesn’t know which limit, if any, applies to your payment. Your bank or UPI app can tell you. If a payment above ₹2,000 won’t go through, see what to check when you can’t pay more than ₹2,000 on UPI.',
+    a: 'It keeps each part under ₹2,000, an amount that comes up a lot in UPI news about limits. TukdaPay doesn’t know which limit, if any, applies to your payment. Your bank or UPI app can tell you. If a payment above ₹2,000 won’t go through, see what to check when you can’t pay more than ₹2,000 on UPI.',
     body: (
       <>
-        It keeps each part under ₹2,000, an amount that comes up a lot in UPI news about limits and charges. TukdaPay
-        doesn’t know which limit, if any, applies to your payment. Your bank or UPI app can tell you. If a payment above
-        ₹2,000 won’t go through, see{' '}
+        It keeps each part under ₹2,000, an amount that comes up a lot in UPI news about limits. TukdaPay doesn’t know
+        which limit, if any, applies to your payment. Your bank or UPI app can tell you. If a payment above ₹2,000
+        won’t go through, see{' '}
         <Link href="/blog/cant-pay-more-than-2000-upi/">what to check when you can’t pay more than ₹2,000 on UPI</Link>.
       </>
     ),
@@ -56,13 +62,14 @@ export const faq: FaqEntry[] = [
   },
   {
     q: 'Will I be charged for a UPI payment above ₹2,000?',
-    a: 'TukdaPay is free, and it can’t tell you what applies to your payment. NPCI’s FAQs on the merchant discount rate (PDF) cover this in question 15: “Will ordinary consumers be charged for making payments via UPI?” For a newer claim, look for it on PIB Fact Check before you believe or forward it. TukdaPay isn’t a way to avoid a fee. Ask the shop before you split.',
+    a: 'TukdaPay is free, and it can’t tell you what applies to your payment. NPCI’s FAQs on the merchant discount rate (PDF) cover this in question 15: “Will ordinary consumers be charged for making payments via UPI?” For a newer claim, see whether PIB Fact Check has covered it on its Telegram channel or X account before you believe or forward it. TukdaPay isn’t a way to avoid a fee. Ask the shop before you split.',
     body: (
       <>
         TukdaPay is free, and it can’t tell you what applies to your payment.{' '}
-        <a href={NPCI_MDR_FAQ_URL}>NPCI’s FAQs on the merchant discount rate</a> (PDF) cover this in question 15: “Will
-        ordinary consumers be charged for making payments via UPI?” For a newer claim, look for it on{' '}
-        <a href={PIB_FACT_CHECK_URL}>PIB Fact Check</a> before you believe or forward it. TukdaPay isn’t a way to avoid a
+        <a href={NPCI_MDR_FAQ_URL}>NPCI’s FAQs on the merchant discount rate (PDF)</a> cover this in question 15: “Will
+        ordinary consumers be charged for making payments via UPI?” For a newer claim, see whether PIB Fact Check has
+        covered it on its <a href={PIB_FACT_CHECK_TELEGRAM_URL}>Telegram channel</a> or{' '}
+        <a href={PIB_FACT_CHECK_X_URL}>X account</a> before you believe or forward it. TukdaPay isn’t a way to avoid a
         fee. Ask the shop before you split.
       </>
     ),

@@ -53,7 +53,7 @@ export default function HomePage() {
       {/* One grid on wide screens: hero and form on the left, the result (or How it works) on the right. */}
       <div className={s.home}>
         <section className={s.hero}>
-          <h1>UPI bill above ₹2,000?<br />Pay it in tukde.</h1>
+          <h1>UPI bill <br className={s.narrowBreak} />above ₹2,000?<br />Pay it in tukde.</h1>
           <p>
             Split the bill into tukde (pieces) of ₹1,999 or less and pay each from GPay, PhonePe, Paytm or any UPI app.
             Free, no signup, nothing leaves your phone.
