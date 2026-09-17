@@ -87,8 +87,10 @@
   --text-small: 15px;
   --text-tick: 14px;
 
-  --measure: 62ch;
-  --measure-narrow: 46ch;
+  /* Line lengths, in em rather than ch: 62ch and 46ch as drawn in Bricolage (1ch = 0.6513em in Chrome). A ch measure
+     narrows when the web font replaces the fallback (Bricolage's zero is wider), which re-wraps text; em stays put. */
+  --measure: 40.4em;
+  --measure-narrow: 30em;
 
   /* Spacing steps: 4 8 12 16 24 32 48 72. */
   --space-4: 4px;

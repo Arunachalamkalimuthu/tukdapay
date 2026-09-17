@@ -72,7 +72,7 @@
 .action { width: 100%; margin-top: 20px; }
 
 /* ---- If you're the merchant: a quiet list ---- */
-.merchants { padding-top: var(--space-32); border-top: 1px solid var(--line); }
+.merchants { padding-top: var(--space-32); border-top: 1px solid var(--line); scroll-margin-top: var(--space-16); }
 .merchants h2,
 .cta h2 { font-size: var(--text-heading); font-weight: 720; letter-spacing: -0.02em; line-height: 1.15; }
 .merchants ul { list-style: none; margin: var(--space-16) 0 0; padding: 0; display: grid; gap: var(--space-16); max-width: 39.1em; }

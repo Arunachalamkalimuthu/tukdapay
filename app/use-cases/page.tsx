@@ -1,19 +1,23 @@
 import Link from 'next/link';
 import { JsonLd } from '@/components/JsonLd';
 import { TukdaStrip } from '@/components/TukdaStrip';
+import { posts } from '@/content/posts';
 import { tryHref, useCases } from '@/content/useCases';
 import { formatRupees } from '@/lib/format';
 import { pageMetadata } from '@/lib/metadata';
+import { ogCards, ogImage } from '@/lib/og';
 import { DEFAULT_MAX, SITE_URL } from '@/lib/site';
 import { splitAmount } from '@/lib/split';
 import { collapseText } from '@/lib/strip';
 import s from './page.module.css';
 
+// ₹2000 without a comma in the title and description, the way people search for it; the page itself groups it.
 export const metadata = pageMetadata({
-  title: 'Use cases',
+  title: 'Split UPI bills above ₹2000: 8 everyday examples',
   description:
-    'Kirana, restaurant, pharmacy, tuition, hotel and more: eight everyday bills split into UPI payments of ₹1,999 or less, with the exact split for each.',
+    'Kirana, restaurant, pharmacy, tuition, hotel and more: eight bills above ₹2000 split into UPI payments of ₹1,999 or less, with the exact parts for each.',
   path: '/use-cases/',
+  image: ogImage(ogCards(posts).find((c) => c.key === 'use-cases')!),
 });
 
 const scenarios = useCases.map((u) => ({ ...u, parts: splitAmount(u.amount, DEFAULT_MAX) }));
@@ -41,13 +45,14 @@ export default function UseCasesPage() {
       <header className={s.intro}>
         <h1>Bills people pay in tukde</h1>
         <p>
-          Corner shops, chemists, tutors and homestays often take only UPI, and plenty of everyday bills cross
-          ₹2,000. People pay these in parts when one big payment won’t go through, when the shop asks for it,
-          or just to keep each payment small.
+          Tukde means pieces: one bill paid as a few smaller UPI payments. Corner shops, chemists, tutors and homestays
+          often take only UPI, and plenty of everyday bills cross ₹2,000. Splitting is one way to pay when a bill won’t
+          go through in one go, or when the shop asks for it. Ask the shop first.
         </p>
         <p>
-          Here are eight of them, each with the exact split TukdaPay makes at {formatRupees(DEFAULT_MAX)} a
-          payment. Pick one to open the splitter with that amount filled in.
+          Here are eight of these bills, each with the exact split TukdaPay makes at {formatRupees(DEFAULT_MAX)} a
+          payment. Pick one to open the splitter with that amount filled in. New to this? Read{' '}
+          <Link href="/blog/split-upi-payment-above-2000/">how to split a UPI payment above ₹2,000</Link>, step by step.
         </p>
       </header>
 
@@ -104,7 +109,8 @@ export default function UseCasesPage() {
         })}
       </div>
 
-      <section className={s.merchants} aria-labelledby="merchants-title">
+      {/* Posts link this section as /use-cases/#merchants, so keep its id. */}
+      <section id="merchants" className={s.merchants} aria-labelledby="merchants-title">
         <h2 id="merchants-title">If you’re the merchant</h2>
         <ul role="list">
           <li>
@@ -121,7 +127,8 @@ export default function UseCasesPage() {
           </li>
           <li>
             <strong>Check what applies to you.</strong> If a payment carries a charge, it may fall on you rather than
-            the customer. <Link href="/blog/upi-2000-threshold-what-to-check/">Here’s how to check</Link>.
+            the customer. Here’s{' '}
+            <Link href="/blog/upi-2000-threshold-what-to-check/">how to check what applies to a UPI payment above ₹2,000</Link>.
           </li>
         </ul>
       </section>
@@ -131,6 +138,10 @@ export default function UseCasesPage() {
         <p>
           Any amount works. Enter the bill and the shop’s UPI ID, then pay each part from GPay, PhonePe, Paytm
           or any UPI app.
+        </p>
+        <p>
+          TukdaPay isn’t a way to avoid a fee:{' '}
+          <Link href="/blog/does-splitting-upi-save-money/">see who a UPI charge lands on</Link>.
         </p>
         <Link className={`btn btn-primary ${s.action}`} href="/">
           Split a payment

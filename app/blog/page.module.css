@@ -2,8 +2,7 @@
   font-size: var(--text-display); font-weight: 800; letter-spacing: -0.03em; line-height: 1.02;
   margin: 0 0 var(--space-16);
 }
-/* 30em, not var(--measure-narrow) (46ch): a ch measure narrows when the web font arrives, and the posts below jump. */
-.intro p { margin: 0; color: var(--muted); font-size: var(--text-lede); line-height: 1.4; max-width: 30em; text-wrap: pretty; }
+.intro p { margin: 0; color: var(--muted); font-size: var(--text-lede); line-height: 1.4; max-width: var(--measure-narrow); text-wrap: pretty; }
 
 .posts { margin-top: 40px; }
 

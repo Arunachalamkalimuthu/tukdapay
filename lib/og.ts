@@ -20,7 +20,7 @@ export interface OgCard {
 export const PAGE_CARDS: readonly OgCard[] = [
   { key: 'blog', label: 'Blog', title: 'Plain-language UPI guides', alt: 'TukdaPay blog: Plain-language UPI guides' },
   { key: 'use-cases', label: 'Use cases', title: 'Bills people pay in tukde', alt: 'TukdaPay use cases: Bills people pay in tukde' },
-  { key: 'about', label: 'About', title: 'Who builds TukdaPay, and why', alt: 'About TukdaPay: who builds it, and why' },
+  { key: 'about', label: 'About', title: 'About TukdaPay', alt: 'About TukdaPay' },
 ];
 
 const KEY = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;

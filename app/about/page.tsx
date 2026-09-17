@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { JsonLd } from '@/components/JsonLd';
+import { posts } from '@/content/posts';
 import { pageMetadata } from '@/lib/metadata';
-import { REPO_URL, SITE_NAME, SITE_URL } from '@/lib/site';
+import { ogCards, ogImage } from '@/lib/og';
+import { organization } from '@/lib/schema';
+import { REPO_URL, SITE_URL } from '@/lib/site';
 import s from './page.module.css';
 
 // The brand is in the title itself (search results and share cards), so the layout's " – TukdaPay" suffix is skipped.
@@ -18,11 +21,16 @@ const GITHUB_PAGES_DATA_URL =
   'https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages#data-collection';
 
 export const metadata: Metadata = {
-  ...pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH }),
+  ...pageMetadata({
+    title: TITLE,
+    description: DESCRIPTION,
+    path: PATH,
+    image: ogImage(ogCards(posts).find((c) => c.key === 'about')!),
+  }),
   title: { absolute: TITLE },
 };
 
-// Matches the ORGANIZATION node SEO-06 adds in lib/schema.ts (same @id); switch to that import when it lands.
+// The organization is the same node, with the same @id, as in home's graph (lib/schema.ts).
 const structuredData = {
   '@context': 'https://schema.org',
   '@type': 'AboutPage',
@@ -30,14 +38,7 @@ const structuredData = {
   name: TITLE,
   description: DESCRIPTION,
   inLanguage: 'en-IN',
-  about: {
-    '@type': 'Organization',
-    '@id': `${SITE_URL}/#organization`,
-    name: SITE_NAME,
-    url: `${SITE_URL}/`,
-    logo: { '@type': 'ImageObject', url: `${SITE_URL}/icons/icon-512.png`, width: 512, height: 512 },
-    sameAs: [REPO_URL],
-  },
+  about: organization(),
 };
 
 export default function AboutPage() {
