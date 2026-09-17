@@ -8,7 +8,8 @@
   line-height: 1.45;
 }
 .inner { border-top: 1px solid var(--line); padding-top: 20px; }
-.foot p { margin: 0; max-width: 52ch; }
+/* 33.87em is 52ch in Bricolage; em doesn't change width when the web font replaces the fallback. */
+.foot p { margin: 0; max-width: 33.87em; }
 
 /* Spacing, not middle dots, separates the links; each is a 44px target. */
 .links { display: flex; flex-wrap: wrap; column-gap: 20px; margin: 6px 0 0; padding: 0; list-style: none; }

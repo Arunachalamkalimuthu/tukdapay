@@ -54,13 +54,19 @@ repo's docs.
   Point to where it is published instead:
   [NPCI's FAQs on the merchant discount rate](https://www.npci.org.in/uploads/FA_Qs_Merchant_Discount_Rate_MDR_on_Select_UPI_P2_M_Transactions_58dba1d39e.pdf)
   by question number (for example, question 15 on whether consumers are
-  charged), or [PIB Fact Check](https://factcheck.pib.gov.in/) for rumours.
+  charged), or, for rumours, PIB Fact Check's
+  [Telegram channel](https://t.me/PIB_FactCheck) or
+  [X account](https://x.com/PIBFactCheck) (its portal is for sending in a
+  claim, not reading checks).
   `npm test` catches a few figures from NPCI's FAQs in posts
   (`test/content.test.ts`), but not every way of stating a rule, so a
   reviewer still checks.
 - **No invented quotes or figures.** Link the source for any number or quote.
 - **Voice.** Plain, sentence case, from the reader's point of view, in Indian
   English.
+- **Quotes.** On the site, use typographic quotes and apostrophes (’ “ ”) in
+  prose, titles and descriptions, including text in JSX (not `&apos;`). Code,
+  URLs and JSX attributes keep straight ones (tested).
 - **Amounts.** Write ₹2000 without a comma, the way people search for it, in
   search and share metadata (`<title>`, meta descriptions, `og:` and
   `twitter:` titles and descriptions, and JSON-LD descriptions written for
@@ -73,6 +79,9 @@ repo's docs.
   `content/posts.ts`, and the FAQ.
 - **FAQ entries.** `a` is the plain-text answer used in the JSON-LD. If you
   add `body` for links or code, it must read exactly the same as `a` (tested).
+- **llms.txt.** Words written in the JSX of the home, use cases and About pages
+  are repeated in `PAGE_COPY` in `lib/llms.ts` for `/llms-full.txt`. Change
+  one and update the other; `npm test` fails until they match.
 
 ## Design
 
@@ -88,11 +97,12 @@ new UI from them rather than adding one-off values.
   in both themes so it scans. When you add or change a colour token, update
   all three theme blocks (`:root`, the `prefers-color-scheme: dark` block and
   `:root[data-theme='dark']`) and check its contrast.
-- **Type, space and shape.** `.t-display`, `.t-title`, `.t-heading`,
-  `.t-lede`, `.t-label`, `.t-small`, `.t-tick`, `.t-money`; `.money` for any
-  amount (condensed, tabular figures); line length with `--measure` and
-  `--measure-narrow`; `--space-4` to `--space-72`; `--radius`, `--radius-lg`,
-  `--radius-sm`. Wrap a page in `.page`.
+- **Type, space and shape.** `.t-display`, `.t-heading`, `.t-lede` and
+  `.t-money`, or the size tokens (`--text-display` to `--text-tick`) in a
+  module; `.money` for any amount (condensed, tabular figures); line length
+  with `--measure` and `--measure-narrow`, or in `em`, never `ch` (its width
+  changes when the web font loads); `--space-4` to `--space-72`; `--radius`,
+  `--radius-lg`, `--radius-sm`. Wrap a page in `.page`.
 - **Buttons.** `.btn` with `.btn-primary`, `.btn-secondary`, `.btn-outline`
   or `.btn-tertiary`, plus `.btn-lg` for the large size. `.btn-primary` is the
   one solid magenta action on a screen; other magenta actions use

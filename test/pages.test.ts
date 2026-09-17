@@ -188,6 +188,25 @@ test('the merchant section on /use-cases/ can be linked as #merchants', () => {
   assert.match(source('app/use-cases/page.tsx'), /<section id="merchants"[^>]*aria-labelledby="merchants-title"/);
 });
 
+test('the merchant section sends merchants to their bank’s terms and never invites bills in parts next to a charge (D1)', () => {
+  const page = source('app/use-cases/page.tsx');
+  const start = page.indexOf('<section id="merchants"');
+  assert.ok(start !== -1, 'no merchant section');
+  const section = page.slice(start, page.indexOf('</section>', start));
+  // A “Split UPI payments welcome” sign beside “a charge may fall on you” reads as taking bills in parts to stay
+  // under a fee on the shop.
+  assert.doesNotMatch(section, /welcome/i);
+  assert.doesNotMatch(section, /\b(fees?|charges?|charged|MDR)\b/i);
+  assert.match(section, /your bank’s terms/);
+  assert.ok(section.includes('href="/blog/upi-2000-threshold-what-to-check/"'), 'the merchant section no longer links the ₹2000 check post');
+});
+
+test('About adds no top padding of its own, so its H1 lines up with the other display-title pages', () => {
+  const about = /(?:^|\n)\.about\s*\{([^}]*)\}/.exec(source('app/about/page.module.css'));
+  assert.ok(about, 'no .about rule in app/about/page.module.css');
+  assert.doesNotMatch(about[1], /padding/);
+});
+
 /** Every /use-cases/#<fragment> in a post, as [post directory, fragment]. */
 function useCaseFragmentsInPosts(): [string, string][] {
   const blog = new URL('../app/blog/', import.meta.url);

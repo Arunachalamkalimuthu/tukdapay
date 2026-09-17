@@ -53,8 +53,6 @@ export interface StripModel {
   labelsInside: boolean;
   /** Each figure sits under its piece; otherwise `summary` is shown as one line. */
   figuresUnder: boolean;
-  /** collapseFigures(parts) */
-  figures: string[];
   /** collapseText(parts) */
   summary: string;
 }
@@ -102,7 +100,7 @@ export function stripModel(parts: readonly number[], { paid, nextIndex }: StripS
   const next = wanted >= 0 && wanted < n && !isPaid(wanted) ? wanted : -1;
 
   if (n === 0 || !(total > 0)) {
-    return { mode: 'pieces', segments: [], gapPx: 0, minPx: 0, labelsInside: false, figuresUnder: false, figures, summary };
+    return { mode: 'pieces', segments: [], gapPx: 0, minPx: 0, labelsInside: false, figuresUnder: false, summary };
   }
 
   if (n > MAX_PIECES) {
@@ -121,7 +119,6 @@ export function stripModel(parts: readonly number[], { paid, nextIndex }: StripS
       minPx: MIN_RUN_PX,
       labelsInside: false,
       figuresUnder: false,
-      figures,
       summary,
     };
   }
@@ -141,7 +138,6 @@ export function stripModel(parts: readonly number[], { paid, nextIndex }: StripS
     minPx: MIN_PIECE_PX,
     labelsInside: n <= MAX_LABELLED_PIECES,
     figuresUnder: n <= MAX_FIGURES && figures.every((f) => f.length <= MAX_FIGURE_LENGTH),
-    figures,
     summary,
   };
 }

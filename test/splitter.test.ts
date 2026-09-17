@@ -5,7 +5,6 @@ import {
   amountSize,
   planProgress,
   previewText,
-  resumeNotice,
   resumeNoticeParts,
   shortReading,
   splitLabel,
@@ -140,13 +139,16 @@ test('planProgress sums many parts without float drift', () => {
 
 // ---- resume banner -----------------------------------------------------------------------
 
-test('resumeNotice names the next part of a restored plan with unpaid parts', () => {
+/** The resume banner as it reads on the page: its two pieces with a space between. */
+const noticeText = (plan: Plan | null, restored: boolean) => {
+  const n = resumeNoticeParts(plan, restored);
+  return n && `${n.lead} ${n.next}`;
+};
+
+test('resumeNoticeParts names the next part of a restored plan with unpaid parts', () => {
   const plan = createPlan(input);
-  assert.equal(resumeNotice(plan, true), 'You have a split in progress: part 1 of 3 is next.');
-  assert.equal(
-    resumeNotice(withPaid(plan, [true, false, false]), true),
-    'You have a split in progress: part 2 of 3 is next.',
-  );
+  assert.equal(noticeText(plan, true), 'You have a split in progress: part 1 of 3 is next.');
+  assert.equal(noticeText(withPaid(plan, [true, false, false]), true), 'You have a split in progress: part 2 of 3 is next.');
 });
 
 test('resumeNoticeParts splits the notice so "part 2 of 3 is next." can stay on one line', () => {
@@ -156,13 +158,13 @@ test('resumeNoticeParts splits the notice so "part 2 of 3 is next." can stay on 
   assert.equal(resumeNoticeParts(withPaid(plan, [true, true, true]), true), null);
 });
 
-test('resumeNotice stays hidden for a plan made in this session', () => {
-  assert.equal(resumeNotice(createPlan(input), false), null);
+test('resumeNoticeParts stays hidden for a plan made in this session', () => {
+  assert.equal(resumeNoticeParts(createPlan(input), false), null);
 });
 
-test('resumeNotice hides once every part is paid, or when there is no plan', () => {
-  assert.equal(resumeNotice(withPaid(createPlan(input), [true, true, true]), true), null);
-  assert.equal(resumeNotice(null, true), null);
+test('resumeNoticeParts hides once every part is paid, or when there is no plan', () => {
+  assert.equal(resumeNoticeParts(withPaid(createPlan(input), [true, true, true]), true), null);
+  assert.equal(resumeNoticeParts(null, true), null);
 });
 
 // ---- recent merchant chips ------------------------------------------------------------

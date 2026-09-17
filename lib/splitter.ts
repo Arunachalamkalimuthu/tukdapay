@@ -132,9 +132,3 @@ export function resumeNoticeParts(plan: Plan | null, restored: boolean): { lead:
   if (nextIndex < 0) return null;
   return { lead: 'You have a split in progress:', next: `part ${nextIndex + 1} of ${n} is next.` };
 }
-
-/** The resume banner as one sentence. */
-export function resumeNotice(plan: Plan | null, restored: boolean): string | null {
-  const parts = resumeNoticeParts(plan, restored);
-  return parts && `${parts.lead} ${parts.next}`;
-}

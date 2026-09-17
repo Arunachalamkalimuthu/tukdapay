@@ -16,13 +16,35 @@ test('ogImagePath rejects keys that are not lower-case slugs', () => {
   }
 });
 
-test('there is a card for every post, labelled Blog and titled like the post', () => {
+test('there is a card for every post, labelled Blog and titled like the post (or its card title)', () => {
   const cards = ogCards(posts);
   for (const p of posts) {
     const card = cards.find((c) => c.key === p.slug);
     assert.ok(card, `no card for ${p.slug}`);
     assert.equal(card.label, 'Blog');
-    assert.equal(card.title, p.title);
+    assert.equal(card.title, p.cardTitle ?? p.title);
+    assert.equal(card.alt, `TukdaPay blog: ${p.title}`);
+  }
+});
+
+test('a post’s card title replaces its title on the card only; the alt text still names the post', () => {
+  const [card] = ogCards([{ slug: 'a-post', title: 'UPI charges above ₹2000: what applies', cardTitle: 'Heard about UPI charges?' }]);
+  assert.deepEqual(card, {
+    key: 'a-post',
+    label: 'Blog',
+    title: 'Heard about UPI charges?',
+    alt: 'TukdaPay blog: UPI charges above ₹2000: what applies',
+  });
+});
+
+test('a card title with a character the fonts can’t draw stops the build too', () => {
+  assert.throws(() => ogCards([{ slug: 'a-post', title: 'Fine', cardTitle: 'Café bills' }]), /a-post.*"é"/s);
+});
+
+test('no post card reads as a fee or a limit when it is forwarded without the page (D6)', () => {
+  // A share card travels alone on WhatsApp: “UPI charges above ₹2000” in 84px type looks like the rumour itself.
+  for (const card of ogCards(posts)) {
+    assert.doesNotMatch(card.title, /\b(charges?|fees?|limit)\b.*₹|₹\d+ limit/i, card.key);
   }
 });
 
@@ -96,16 +118,17 @@ test('textWidth scales with font size and counts letter spacing per character', 
   assert.ok(textWidth('मराठी', 100, 0) > 0, 'unknown characters still take space');
 });
 
-test('every post title fits in three lines, in the widest size that allows it', () => {
+test('every post card title fits in three lines, in the widest size that allows it', () => {
   for (const p of posts) {
-    const { fontSize, lines } = fitTitle(p.title);
+    const title = p.cardTitle ?? p.title;
+    const { fontSize, lines } = fitTitle(title);
     assert.ok(lines.length <= OG_TITLE.maxLines, `${p.slug}: ${lines.length} lines`);
-    assert.equal(lines.join(' '), p.title, p.slug);
+    assert.equal(lines.join(' '), title, p.slug);
     for (const line of lines) {
       assert.ok(textWidth(line, fontSize, OG_TITLE.letterSpacing) <= OG_TITLE.maxWidth, `${p.slug}: "${line}" overflows`);
     }
     for (const size of OG_TITLE.sizes.filter((s) => s > fontSize)) {
-      assert.equal(fitTitle(p.title, [size]).truncated, true, `${p.slug} would fit at ${size}px`);
+      assert.equal(fitTitle(title, [size]).truncated, true, `${p.slug} would fit at ${size}px`);
     }
   }
 });

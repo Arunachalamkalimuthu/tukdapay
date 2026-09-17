@@ -40,7 +40,7 @@ const howItWorks = (
     <ol className={s.steps}>
       <li><span><strong>Enter the bill</strong> and the merchant’s UPI ID from their sticker or invoice.</span></li>
       <li><span><strong>Split</strong> — TukdaPay breaks it into parts at or under your limit (₹5,000 becomes ₹1,999 + ₹1,999 + ₹1,002), each tagged <em>Part 1/3</em>, <em>Part 2/3</em>… so the shop can match them.</span></li>
-      <li><span><strong>Pay each part</strong> — every Pay button opens your own UPI app with the amount filled in. Tick them off as you go.</span></li>
+      <li><span><strong>Pay each part</strong> — each Pay button opens your UPI app with the amount filled in. Tick them off as you go.</span></li>
     </ol>
   </section>
 );
@@ -58,6 +58,10 @@ export default function HomePage() {
             Split the bill into tukde (pieces) of ₹1,999 or less and pay each from GPay, PhonePe, Paytm or any UPI app.
             Free, no signup, nothing leaves your phone.
           </p>
+          {/* Inside the hero, not beside it: a direct child of the wide-screen grid would land in a gutter column. */}
+          <noscript>
+            <p className={s.noscript}>The splitter needs JavaScript. Turn it on to split a bill; the guides below work without it.</p>
+          </noscript>
         </section>
 
         {/*
@@ -73,7 +77,7 @@ export default function HomePage() {
           <h2 id="why-title">Why people use it</h2>
           <ul className={s.why}>
             <li><strong>Nothing leaves your phone.</strong> No account, no server, no bank details. It only writes <code>upi://pay</code> links.</li>
-            <li><strong>Works with every UPI app.</strong> Google Pay, PhonePe, Paytm, BHIM, CRED, bank apps — on a computer, scan the QR instead.</li>
+            <li><strong>Works with your UPI app.</strong> Google Pay, PhonePe, Paytm, BHIM, Amazon Pay, CRED, bank apps — on a computer, scan the QR instead.</li>
             <li><strong>Free and open source.</strong> MIT licensed. Read the code, fork it, fix it.</li>
           </ul>
           <Link className={s.more} href="/use-cases/">{`See ${useCases.length} bills people split, from kirana to tuition fees`}</Link>

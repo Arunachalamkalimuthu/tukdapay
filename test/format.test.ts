@@ -10,6 +10,8 @@ import {
   amountToInput,
   isValidAmount,
   MAX_AMOUNT,
+  MAX_AMOUNT_TEXT,
+  numberRuns,
 } from '../lib/format.ts';
 
 test('formatInr uses Indian grouping and two decimals', () => {
@@ -85,6 +87,10 @@ test('isValidAmount needs at least one paisa', () => {
   assert.equal(isValidAmount(Infinity), false);
 });
 
+test('MAX_AMOUNT_TEXT keeps “₹100” and “crore” on one line', () => {
+  assert.equal(MAX_AMOUNT_TEXT, '₹100\u00a0crore');
+});
+
 test('isValidAmount rejects amounts over MAX_AMOUNT', () => {
   assert.equal(MAX_AMOUNT, 1_00_00_00_000);
   assert.equal(isValidAmount(MAX_AMOUNT), true);
@@ -122,43 +128,172 @@ test('formatInputAmount keeps every digit of a very long amount', () => {
 
 // ---- editAmountInput -----------------------------------------------------------
 
+/** The value and caret of an edit, as the older tests compare them. */
+const edit = (before: string, after: string, caret: number, carried?: string) => {
+  const { value, caret: at } = editAmountInput(before, after, caret, carried);
+  return { value, caret: at };
+};
+
 test('editAmountInput takes ordinary typing and deleting as it is', () => {
-  assert.deepEqual(editAmountInput('', '5', 1), { value: '5', caret: 1 });
-  assert.deepEqual(editAmountInput('5000', '59000', 2), { value: '59000', caret: 2 });
-  assert.deepEqual(editAmountInput('1,999', '1,9999', 3), { value: '1,9999', caret: 3 });
-  assert.deepEqual(editAmountInput('4999', '49.99', 3), { value: '49.99', caret: 3 });
-  assert.deepEqual(editAmountInput('4999.5', '4999.50', 7), { value: '4999.50', caret: 7 });
-  assert.deepEqual(editAmountInput('4,999.50', '4,99950', 5), { value: '4,99950', caret: 5 });
-  assert.deepEqual(editAmountInput('4,999', '', 0), { value: '', caret: 0 });
+  assert.deepEqual(edit('', '5', 1), { value: '5', caret: 1 });
+  assert.deepEqual(edit('5000', '59000', 2), { value: '59000', caret: 2 });
+  assert.deepEqual(edit('1,999', '1,9999', 3), { value: '1,9999', caret: 3 });
+  assert.deepEqual(edit('4999', '49.99', 3), { value: '49.99', caret: 3 });
+  assert.deepEqual(edit('4999.5', '4999.50', 7), { value: '4999.50', caret: 7 });
+  assert.deepEqual(edit('4,999.50', '4,99950', 5), { value: '4,99950', caret: 5 });
+  assert.deepEqual(edit('4,999', '', 0), { value: '', caret: 0 });
 });
 
 test('editAmountInput ignores a second "." rather than dropping digits', () => {
-  assert.deepEqual(editAmountInput('4999.50', '49.99.50', 3), { value: '4999.50', caret: 2 });
-  assert.deepEqual(editAmountInput('14,999', '14.,999', 3), { value: '14,999', caret: 2 });
-  assert.deepEqual(editAmountInput('12.5', '12.5.', 5), { value: '12.5', caret: 4 });
+  assert.deepEqual(edit('4999.50', '49.99.50', 3), { value: '4999.50', caret: 2 });
+  assert.deepEqual(edit('14,999', '14.,999', 3), { value: '14,999', caret: 2 });
+  assert.deepEqual(edit('12.5', '12.5.', 5), { value: '12.5', caret: 4 });
 });
 
 test('editAmountInput ignores a digit that has no room after the decimal point', () => {
-  assert.deepEqual(editAmountInput('12.34', '12.534', 4), { value: '12.34', caret: 3 });
-  assert.deepEqual(editAmountInput('49999', '49.999', 3), { value: '49999', caret: 2 });
-  assert.deepEqual(editAmountInput('12.34', '12.345', 6), { value: '12.34', caret: 5 });
+  assert.deepEqual(edit('12.34', '12.534', 4), { value: '12.34', caret: 3 });
+  assert.deepEqual(edit('49999', '49.999', 3), { value: '49999', caret: 2 });
+  assert.deepEqual(edit('12.34', '12.345', 6), { value: '12.34', caret: 5 });
 });
 
 test('editAmountInput keeps the caret where it was when a key is not taken', () => {
-  assert.deepEqual(editAmountInput('5000', '5x000', 2), { value: '5000', caret: 1 });
-  assert.deepEqual(editAmountInput('5000', '5 000', 2), { value: '5000', caret: 1 });
-  assert.deepEqual(editAmountInput('12.5', '12.5,', 5), { value: '12.5', caret: 4 });
+  assert.deepEqual(edit('5000', '5x000', 2), { value: '5000', caret: 1 });
+  assert.deepEqual(edit('5000', '5 000', 2), { value: '5000', caret: 1 });
+  assert.deepEqual(edit('12.5', '12.5,', 5), { value: '12.5', caret: 4 });
 });
 
 test('editAmountInput cleans up a pasted amount', () => {
-  assert.deepEqual(editAmountInput('', 'Rs. 4,999/-', 11), { value: '4,999', caret: 5 });
-  assert.deepEqual(editAmountInput('', '₹ 1,00,000.00', 13), { value: '1,00,000.00', caret: 11 });
-  assert.deepEqual(editAmountInput('1,000', 'Rs.4999', 7), { value: '4999', caret: 4 });
-  assert.deepEqual(editAmountInput('', '12.345', 6), { value: '12.34', caret: 5 });
-  assert.deepEqual(editAmountInput('100', '1Rs. 5000', 9), { value: '15000', caret: 5 });
+  assert.deepEqual(edit('', 'Rs. 4,999/-', 11), { value: '4,999', caret: 5 });
+  assert.deepEqual(edit('', '₹ 1,00,000.00', 13), { value: '1,00,000.00', caret: 11 });
+  assert.deepEqual(edit('1,000', 'Rs.4999', 7), { value: '4999', caret: 4 });
+  assert.deepEqual(edit('', '12.345', 6), { value: '12.34', caret: 5 });
+  assert.deepEqual(edit('100', '1Rs. 5000', 9), { value: '15000', caret: 5 });
 });
 
 test('editAmountInput cleans the whole value when the edit is not a plain insert or delete', () => {
-  assert.deepEqual(editAmountInput('5000', 'ab12', 0), { value: '12', caret: 2 });
-  assert.deepEqual(editAmountInput('5000', 'Rs.12', 1), { value: '12', caret: 2 });
+  assert.deepEqual(edit('5000', 'ab12', 0), { value: '12', caret: 2 });
+  assert.deepEqual(edit('5000', 'Rs.12', 1), { value: '12', caret: 2 });
+});
+
+test('a currency sign between two numbers keeps them apart', () => {
+  assert.deepEqual(numberRuns('2 ₹450'), ['2', '450']);
+  assert.deepEqual(numberRuns('Thali x2 ₹450'), ['2', '450']);
+  assert.deepEqual(numberRuns('2 Rs450'), ['2', '450']);
+  assert.deepEqual(numberRuns('Table 12 ₹450'), ['12', '450']);
+  assert.deepEqual(numberRuns('₹4 999'), ['4999']);
+  assert.deepEqual(numberRuns('₹ 4 999'), ['4999']);
+  assert.deepEqual(numberRuns('Rs. 4 999/-'), ['4999']);
+});
+
+test('numberRuns finds each number in a line of text, currency aside', () => {
+  assert.deepEqual(numberRuns('Rs. 4,999/-'), ['4,999']);
+  assert.deepEqual(numberRuns('Rs.4999.00'), ['4999.00']);
+  assert.deepEqual(numberRuns('Rs 4,999 (incl. GST 18%)'), ['4,999', '18']);
+  assert.deepEqual(numberRuns('2.5e4'), ['2.5', '4']);
+  assert.deepEqual(numberRuns('1.2.3'), ['1.2.3']);
+  assert.deepEqual(numberRuns('.'), []);
+  assert.deepEqual(numberRuns('abc'), []);
+});
+
+test('numberRuns reads digit groups split by single spaces as one number when they group like an amount', () => {
+  // Western groups (1–3 digits, then threes) and Indian groups (1–2 digits, then twos, then a three).
+  assert.deepEqual(numberRuns('4 999'), ['4999']);
+  assert.deepEqual(numberRuns('₹ 4 999'), ['4999']);
+  assert.deepEqual(numberRuns('Rs. 4 999/-'), ['4999']);
+  assert.deepEqual(numberRuns('12 345'), ['12345']);
+  assert.deepEqual(numberRuns('1 000 000'), ['1000000']);
+  assert.deepEqual(numberRuns('1 00 000'), ['100000']);
+  assert.deepEqual(numberRuns('10 00 000.50'), ['1000000.50']);
+  assert.deepEqual(numberRuns('4 999 for 2 items'), ['4999', '2']);
+  // A no-break space, narrow no-break space or thin space, as number formatting and some PDFs write them.
+  for (const space of [' ', ' ', ' ']) assert.deepEqual(numberRuns(`4${space}999`), ['4999'], JSON.stringify(space));
+});
+
+test('numberRuns keeps numbers apart when the spaces between them aren’t digit grouping', () => {
+  assert.deepEqual(numberRuns('5000 x 2'), ['5000', '2']);
+  assert.deepEqual(numberRuns('Total: 4,999 for 2 items'), ['4,999', '2']);
+  assert.deepEqual(numberRuns('4999 and 50'), ['4999', '50']);
+  assert.deepEqual(numberRuns('1e5'), ['1', '5']);
+  // Every group has to fit, or none are joined.
+  assert.deepEqual(numberRuns('12 34 56 7'), ['12', '34', '56', '7']);
+  assert.deepEqual(numberRuns('4 999 5'), ['4', '999', '5']);
+  assert.deepEqual(numberRuns('5000 999'), ['5000', '999']);
+  assert.deepEqual(numberRuns('100 00 000'), ['100', '00', '000']);
+  assert.deepEqual(numberRuns('4 9999'), ['4', '9999']);
+  assert.deepEqual(numberRuns('4  999'), ['4', '999']);
+  // A group can't start after a comma or a decimal point.
+  assert.deepEqual(numberRuns('1,000 999'), ['1,000', '999']);
+  assert.deepEqual(numberRuns('4.5 999'), ['4.5', '999']);
+});
+
+test('editAmountInput keeps only the first number of a pasted line, rather than running every number together', () => {
+  for (const [pasted, value] of [
+    ['Rs 4,999 (incl. GST 18%)', '4,999'],
+    ['Total: 4,999 for 2 items', '4,999'],
+    ['₹4,999 - 10% off', '4,999'],
+    ['Amount 12,500 Inv no. 318', '12,500'],
+    ['5000 x 2', '5000'],
+    ['4999 and 50', '4999'],
+    ['12 34 56 7', '12'],
+  ]) {
+    assert.deepEqual(edit('', pasted, pasted.length), { value, caret: value.length }, pasted);
+  }
+  assert.deepEqual(edit('1,000', '15000x2', 7), { value: '15000', caret: 5 });
+  assert.deepEqual(edit('5000', '12 x 3', 0), { value: '12', caret: 2 });
+});
+
+test('editAmountInput keeps every digit of an amount pasted with spaces between its digit groups', () => {
+  for (const [pasted, value] of [
+    ['4 999', '4999'],
+    ['₹ 4 999', '4999'],
+    ['Rs. 1 00 000.50', '100000.50'],
+    ['Total: 12 500 for 2 items', '12500'],
+    ['4 999', '4999'],
+  ]) {
+    assert.deepEqual(edit('', pasted, pasted.length), { value, caret: value.length }, pasted);
+  }
+  // A space typed between digits is still a key the field doesn't take.
+  assert.deepEqual(edit('5000', '5 000', 2), { value: '5000', caret: 1 });
+});
+
+/**
+ * Type `keys` one at a time into a field holding `start`, the first key replacing all of it (as after
+ * select-all), carrying dropped keys from one edit to the next as the amount field does.
+ */
+function typeKeys(keys: string, start = ''): string {
+  let value = start;
+  let carry = '';
+  let first = true;
+  for (const key of keys) {
+    const after = first ? key : value + key;
+    ({ value, carry } = editAmountInput(value, after, after.length, carry));
+    first = false;
+  }
+  return value;
+}
+
+test('editAmountInput reads “Rs.” typed one key at a time as currency, not as a decimal point', () => {
+  assert.deepEqual(edit('', '.', 1, 'Rs'), { value: '', caret: 0 });
+  assert.equal(typeKeys('Rs.4999'), '4999');
+  assert.equal(typeKeys('Rs. 4,999/-'), '4,999');
+  assert.equal(typeKeys('rs.12000'), '12000');
+  assert.equal(typeKeys('Re.1'), '1');
+  assert.equal(typeKeys('INR.500'), '500');
+  assert.equal(typeKeys('Rs.4999', '1,000'), '4999');
+  // Nothing else changes: other letters are still dropped, and a “.” of its own is still a decimal point.
+  assert.equal(typeKeys('Rs 4999'), '4999');
+  assert.equal(typeKeys('₹4999'), '4999');
+  assert.equal(typeKeys('a4999'), '4999');
+  assert.equal(typeKeys('.50'), '.50');
+  assert.equal(typeKeys('fare.50'), '.50');
+});
+
+test('editAmountInput carries dropped keys only until a key is taken, and only at the start of the field', () => {
+  assert.equal(editAmountInput('', 'R', 1).carry, 'R');
+  assert.equal(editAmountInput('', 's', 1, 'R').carry, 'Rs');
+  assert.deepEqual(editAmountInput('', '4', 1, 'Rs.'), { value: '4', caret: 1, carry: '' });
+  assert.deepEqual(editAmountInput('4,999', 'R', 1), { value: '', caret: 0, carry: 'R' });
+  assert.equal(editAmountInput('4999.50', '49.99.50', 3).carry, '');
+  assert.deepEqual(edit('12', '12.', 3, 'Rs'), { value: '12.', caret: 3 });
+  assert.equal(editAmountInput('5000', 'ab12', 0, 'Rs').carry, '');
 });

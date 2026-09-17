@@ -30,7 +30,7 @@ jobs:
       - run: npm run lint
       - run: npm run build
       - name: Check the export
-        run: test -f out/index.html && test -f out/CNAME && npm run check:export
+        run: npm run check:export
       - uses: actions/upload-pages-artifact@v5
         with:
           path: out

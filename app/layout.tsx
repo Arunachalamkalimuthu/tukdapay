@@ -4,6 +4,7 @@ import { SITE_NAME, SITE_URL } from '@/lib/site';
 import { FEED_ALTERNATE, OG_IMAGE } from '@/lib/metadata';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
+import { RouteFocus } from '@/components/RouteFocus';
 import './globals.css';
 
 // Variable weight plus the width axis: money is set condensed (see .money in globals.css).
@@ -70,6 +71,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SiteHeader />
         <main id="main">{children}</main>
         <SiteFooter />
+        <RouteFocus />
       </body>
     </html>
   );
