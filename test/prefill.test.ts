@@ -43,6 +43,7 @@ test('an amount with more than one number in it is ignored, not run together int
 
 test('an amount with spaces between its digit groups is one amount', () => {
   assert.deepEqual(p('amount=4%20999'), { present: true, amount: 4999 });
+  assert.deepEqual(p(`amount=${enc('Thali x2 ₹450')}`), { present: false });
   assert.deepEqual(p('amount=4+999'), { present: true, amount: 4999 });
   assert.equal(p(`amount=${enc('₹ 4 999')}`).amount, 4999);
   assert.equal(p(`amount=${enc('Rs. 1 00 000.50')}`).amount, 100000.5);

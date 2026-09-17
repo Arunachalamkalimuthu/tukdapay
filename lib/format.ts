@@ -20,6 +20,9 @@ const CURRENCY = /(?<![a-z])(?:rs|re|inr)\.?|₹/gi;
 
 const stripCurrency = (s: string) => s.replace(CURRENCY, '');
 
+/** Stands in for a currency while digit groups are joined: not a digit, separator or space. */
+const CURRENCY_MARK = '\u{E000}';
+
 /** A space, no-break space, narrow no-break space or thin space: what people and number formatting put between digit groups. */
 const GROUP_SPACE = '[ \\u00a0\\u202f\\u2009]';
 /**
@@ -55,7 +58,9 @@ const joinDigitGroups = (s: string) =>
  * "1 00 000" -> ["100000"]. Spaces that don't ("12 34 56 7", "5000 999") keep the numbers apart.
  */
 export function numberRuns(s: string): string[] {
-  return joinDigitGroups(stripCurrency(s)).match(/[\d.,]*\d[\d.,]*/g) ?? [];
+  // Mark the currency instead of deleting it before joining, so "2 ₹450" stays two numbers.
+  const joined = joinDigitGroups(s.replace(CURRENCY, CURRENCY_MARK)).replaceAll(CURRENCY_MARK, '');
+  return joined.match(/[\d.,]*\d[\d.,]*/g) ?? [];
 }
 
 /**

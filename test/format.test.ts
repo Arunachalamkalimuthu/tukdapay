@@ -175,6 +175,16 @@ test('editAmountInput cleans the whole value when the edit is not a plain insert
   assert.deepEqual(edit('5000', 'Rs.12', 1), { value: '12', caret: 2 });
 });
 
+test('a currency sign between two numbers keeps them apart', () => {
+  assert.deepEqual(numberRuns('2 ₹450'), ['2', '450']);
+  assert.deepEqual(numberRuns('Thali x2 ₹450'), ['2', '450']);
+  assert.deepEqual(numberRuns('2 Rs450'), ['2', '450']);
+  assert.deepEqual(numberRuns('Table 12 ₹450'), ['12', '450']);
+  assert.deepEqual(numberRuns('₹4 999'), ['4999']);
+  assert.deepEqual(numberRuns('₹ 4 999'), ['4999']);
+  assert.deepEqual(numberRuns('Rs. 4 999/-'), ['4999']);
+});
+
 test('numberRuns finds each number in a line of text, currency aside', () => {
   assert.deepEqual(numberRuns('Rs. 4,999/-'), ['4,999']);
   assert.deepEqual(numberRuns('Rs.4999.00'), ['4999.00']);
