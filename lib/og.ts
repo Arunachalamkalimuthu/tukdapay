@@ -33,11 +33,12 @@ export function ogImagePath(key: string): string {
 
 /**
  * Every card the build writes: one per post (so a new post in content/posts.ts gets one), then the pages.
+ * A post's card shows its cardTitle when it has one, and its title otherwise; the alt text always names the post.
  * Throws if two cards share a file, or if a title or label has a character the card fonts can't draw.
  */
-export function ogCards(posts: readonly { slug: string; title: string }[]): OgCard[] {
+export function ogCards(posts: readonly { slug: string; title: string; cardTitle?: string }[]): OgCard[] {
   const cards: OgCard[] = [
-    ...posts.map((p) => ({ key: p.slug, label: 'Blog', title: p.title, alt: `TukdaPay blog: ${p.title}` })),
+    ...posts.map((p) => ({ key: p.slug, label: 'Blog', title: p.cardTitle ?? p.title, alt: `TukdaPay blog: ${p.title}` })),
     ...PAGE_CARDS,
   ];
   const seen = new Set<string>();

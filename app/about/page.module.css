@@ -1,5 +1,5 @@
 /* About: a wide page (640px, the default --container) set like a blog post, with a display title. */
-.about { overflow-wrap: break-word; padding-top: 16px; }
+.about { overflow-wrap: break-word; }
 .about h1 { margin: 0 0 12px; }
 .about h2 { margin: 40px 0 10px; }
 .about p { margin: 0 0 14px; max-width: var(--measure); text-wrap: pretty; }

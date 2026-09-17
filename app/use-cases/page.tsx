@@ -115,8 +115,8 @@ export default function UseCasesPage() {
         <h2 id="merchants-title">If you’re the merchant</h2>
         <ul role="list">
           <li>
-            <strong>Say yes or no up front.</strong> A sign at the counter (“Split UPI payments welcome” or “One
-            payment per bill”) saves a conversation.
+            <strong>Say up front whether you take a bill in parts.</strong> Some customers can’t pay a large bill in
+            one UPI payment; tell them before they start.
           </li>
           <li>
             <strong>Look for the part numbers.</strong> TukdaPay tags every payment <em>Part 1/3</em>,{' '}
@@ -127,8 +127,7 @@ export default function UseCasesPage() {
             the bill.
           </li>
           <li>
-            <strong>Check what applies to you.</strong> If a payment carries a charge, it may fall on you rather than
-            the customer. Here’s{' '}
+            <strong>Check what applies to you</strong>, including your bank’s terms for your UPI QR. Here’s{' '}
             <Link href="/blog/upi-2000-threshold-what-to-check/">how to check what applies to a UPI payment above ₹2,000</Link>.
           </li>
         </ul>

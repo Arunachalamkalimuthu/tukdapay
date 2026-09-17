@@ -30,7 +30,7 @@ export const useCases: UseCase[] = [
     amount: 3650,
     who: 'Dining out',
     story: 'Dinner for four is ₹3,650 and the restaurant’s QR is on the bill folder. One person pays and collects from the others later.',
-    tip: 'Use the bill number as the note. Tell the waiter it’s coming as two payments.',
+    tip: 'Use the bill number as the note, and ask before you pay whether two payments are fine.',
     note: 'Bill 1042',
   },
   {
@@ -38,8 +38,8 @@ export const useCases: UseCase[] = [
     title: 'Phone, mixer or appliance',
     amount: 14999,
     who: 'Shopping',
-    story: 'A ₹14,999 phone at a local electronics shop that takes UPI. The card machine is “not working today”.',
-    tip: 'Eight payments — ask the shop first. Many prefer it to a card fee, some don’t.',
+    story: 'A ₹14,999 phone at a local electronics shop that takes UPI, but one payment that size won’t go through from your account.',
+    tip: 'Eight payments means eight PINs. Ask the shop first, and put the invoice number in the note.',
     note: 'Invoice 318',
   },
   {
@@ -47,8 +47,8 @@ export const useCases: UseCase[] = [
     title: 'Pharmacy and diagnostics',
     amount: 2850,
     who: 'Health',
-    story: 'Medicines and a blood test for a parent come to ₹2,850 at the chemist next to the clinic.',
-    tip: 'Keep the note as the prescription date; it helps with insurance claims later.',
+    story: 'Medicines and a blood test for a parent come to ₹2,850 at the pharmacy and lab next to the clinic.',
+    tip: 'Use the prescription date as the note so the payments are easy to find later.',
     note: 'Prescription 12 Sept',
   },
   {
@@ -65,8 +65,8 @@ export const useCases: UseCase[] = [
     title: 'Wedding and event vendors',
     amount: 25000,
     who: 'Events',
-    story: 'Advance to the decorator, balance to the caterer, tips to the band — all by UPI, all above ₹2,000.',
-    tip: 'Send the WhatsApp breakdown to the vendor so both sides have the same list.',
+    story: 'The decorator’s advance is ₹25,000, paid by UPI to the decorator’s ID.',
+    tip: 'Ask the decorator first, then send the WhatsApp breakdown so both sides have the same list.',
     note: 'Decorator advance',
   },
   {
@@ -75,7 +75,7 @@ export const useCases: UseCase[] = [
     amount: 5400,
     who: 'Travel',
     story: 'Two nights at a homestay, ₹5,400, paid to the owner’s UPI ID at checkout.',
-    tip: 'Note the booking dates. Screenshots of three payments are easier than arguing about one.',
+    tip: 'Note the booking dates, and ask the owner at checkout before you pay in parts.',
     note: 'Stay 10 to 12 Oct',
   },
   {

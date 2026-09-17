@@ -159,6 +159,16 @@ test('use case notes are short and not blank', () => {
   }
 });
 
+test('no use case pitches splitting as a way around a fee (D1)', () => {
+  // The singular \bfee\b lets a note like “Priya – Oct fees” through; a card fee, or a card machine that is
+  // “not working today”, is the fee-avoidance pitch.
+  for (const u of useCases) {
+    for (const text of [u.story, u.tip]) {
+      assert.doesNotMatch(text, /\b(fee|MDR|charges?|charged)\b|\bcard (fee|machine)\b/i, u.slug);
+    }
+  }
+});
+
 test('"Try with" links prefill the splitter with the amount and note', () => {
   for (const u of useCases) {
     const href = tryHref(u);
@@ -200,6 +210,40 @@ test('post titles fit a search result with the site suffix, and descriptions fit
 test('post titles and descriptions write ₹2000 the way people search for it', () => {
   for (const p of posts) {
     assert.doesNotMatch(`${p.title} ${p.description}`, /₹2,000/, p.slug);
+  }
+});
+
+/** Straight quotes in text a reader sees, each with a little context, so a failure says where. */
+const straightQuotes = (text: string) =>
+  [...text.matchAll(/['"]/g)].map((m) => text.slice(Math.max(0, m.index - 16), m.index + 8).replace(/\s+/g, ' '));
+
+test('post titles, card titles, descriptions and use cases use typographic quotes, like the rest of the site', () => {
+  for (const p of posts) {
+    for (const text of [p.title, p.cardTitle ?? '', p.description]) {
+      assert.deepEqual(straightQuotes(text), [], p.slug);
+    }
+  }
+  for (const u of useCases) {
+    assert.deepEqual(straightQuotes([u.title, u.who, u.story, u.tip, u.note ?? ''].join(' ')), [], u.slug);
+  }
+});
+
+/** A post’s prose: the MDX source without import and export lines, code, JSX tags or link targets. */
+const postProse = (src: string) =>
+  src
+    .replace(/^(import|export) .*$/gm, '')
+    .replace(/^```[\s\S]*?^```$/gm, '')
+    .replace(/`[^`\n]*`/g, '')
+    .replace(/\]\([^)\s]*\)/g, ']')
+    .replace(/<\/?[A-Z][^>]*>/g, '');
+
+test('post prose uses typographic quotes and apostrophes; code, links and JSX keep straight ones', () => {
+  assert.equal(
+    postProse("import x from 'y'\nIt’s `a 'b'` [“c”](/d/?e='f') <Cta href=\"/\">Go</Cta>\n```ts\nconst q = 'x';\n```"),
+    '\nIt’s  [“c”] Go\n',
+  );
+  for (const p of posts) {
+    assert.deepEqual(straightQuotes(postProse(postSource(p.slug))), [], p.slug);
   }
 });
 
