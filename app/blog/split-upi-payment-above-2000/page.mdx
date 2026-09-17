@@ -4,13 +4,15 @@ export const metadata = postMetadata('split-upi-payment-above-2000')
 
 export default postLayout('split-upi-payment-above-2000')
 
-<Lede>You're at the counter, the bill is ₹5,000, and you want to pay it as several smaller UPI payments. Here's the whole thing in about a minute.</Lede>
+<Lede>You're at the counter, the bill is ₹5,000, and you need to pay it as several smaller UPI payments. Here's the whole thing in about a minute.</Lede>
+
+If a single payment isn't going through and you're not sure why, first read [what to check when you can't pay more than ₹2,000 on UPI](/blog/cant-pay-more-than-2000-upi/). Paying in parts only helps with some of those reasons.
 
 ## What you need
 
 - The merchant's UPI ID — it's printed on their QR sticker (usually `something@bank`), or ask them.
 - Any UPI app on your phone: Google Pay, PhonePe, Paytm, BHIM, CRED, your bank's app.
-- [TukdaPay](/) open in your phone's browser.
+- [TukdaPay's UPI payment splitter](/) open in your phone's browser.
 
 ## Step 1 — Enter the bill
 
@@ -28,7 +30,9 @@ Tap **Split into payments**. TukdaPay fills as many parts as it can at the limit
 
 Each part carries its number in the payment note (*Part 1/3*, *Part 2/3*…) so the merchant can see they belong together.
 
-The default limit is ₹1,999. If a different figure applies to you, open **Max per payment** and change it before splitting.
+For more worked examples, from a ₹4,200 kirana bill to ₹5,500 tuition fees, see [bills people split into UPI payments](/use-cases/).
+
+The default limit is ₹1,999. If a different figure applies to you, open **Max per payment** and change it before splitting. Not sure what applies? Here's [how to check what applies to UPI payments above ₹2,000](/blog/upi-2000-threshold-what-to-check/).
 
 ## Step 3 — Pay each part
 
@@ -37,7 +41,7 @@ Tap **Pay** on the first part. Your phone asks which UPI app to open (or opens y
 Come back to the browser, tick **Paid**, and repeat for the next part. The progress bar shows how many are left, and it's saved in your browser, so you can safely switch apps or refresh.
 
 <Callout>
-**Tell the merchant first.** Three payments of ₹1,999 look different from one of ₹5,000 on their side. Most shops don't mind, but say so before you start.
+**Ask the shop first.** Three payments of ₹1,999 look different from one of ₹5,000 on their side, so check they're happy to take the bill in parts before you start.
 </Callout>
 
 ## On a computer
@@ -48,5 +52,6 @@ There's no UPI app to open, so TukdaPay shows a QR code under each part instead.
 
 - It can't confirm a payment. UPI links don't report back to a web page, so **Paid** is your own tick.
 - It can't pay a plain phone number or a bank account. It needs a UPI ID.
+- It can't help with a limit on how much you pay in a day. The parts add up to the same total.
 
-<Cta href="/">Open TukdaPay</Cta>
+<Cta href="/">Split your bill in TukdaPay</Cta>

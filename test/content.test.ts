@@ -1,10 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { isValidElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { faq } from '../content/faq.tsx';
+import { posts } from '../content/posts.ts';
 import { tryHref, useCases } from '../content/useCases.ts';
 import { readPrefill } from '../lib/prefill.ts';
+import { toRfc822 } from '../lib/rss.ts';
 import { DEFAULT_MAX } from '../lib/site.ts';
 import { splitAmount } from '../lib/split.ts';
 
@@ -62,5 +65,67 @@ test('no use case ends in a token last payment', () => {
     const parts = splitAmount(u.amount, DEFAULT_MAX);
     const last = parts[parts.length - 1];
     assert.ok(last >= 100, `${u.slug}: last payment is only ₹${last}`);
+  }
+});
+
+/** The layout's title template adds this to every post title. */
+const TITLE_SUFFIX = ' – TukdaPay';
+const chars = (s: string) => Array.from(s).length;
+const postSource = (slug: string) => readFileSync(new URL(`../app/blog/${slug}/page.mdx`, import.meta.url), 'utf8');
+
+test('post titles fit a search result with the site suffix, and descriptions fit a snippet', () => {
+  for (const p of posts) {
+    const title = chars(p.title + TITLE_SUFFIX);
+    assert.ok(title <= 63, `${p.slug}: title is ${title} characters with the suffix`);
+    const description = chars(p.description);
+    assert.ok(description >= 70 && description <= 160, `${p.slug}: description is ${description} characters`);
+  }
+});
+
+test('post titles and descriptions write ₹2000 the way people search for it', () => {
+  for (const p of posts) {
+    assert.doesNotMatch(`${p.title} ${p.description}`, /₹2,000/, p.slug);
+  }
+});
+
+test('a post’s updated date, when set, is a real date on or after its publish date', () => {
+  for (const p of posts) {
+    assert.doesNotThrow(() => toRfc822(p.date), `${p.slug}: date`);
+    if (p.updated === undefined) continue;
+    const updated = p.updated;
+    assert.doesNotThrow(() => toRfc822(updated), `${p.slug}: updated`);
+    assert.ok(updated >= p.date, `${p.slug}: updated ${updated} is before the publish date ${p.date}`);
+  }
+});
+
+test('posts point to NPCI’s FAQ instead of restating its figures and dates', () => {
+  for (const p of posts) {
+    const src = postSource(p.slug);
+    for (const figure of ['0.4%', '₹300', '₹75,000', '15 October', '₹5 ', '₹1 lakh']) {
+      assert.ok(!src.includes(figure), `${p.slug} restates "${figure}"`);
+    }
+  }
+});
+
+test('post links to the splitter say what they open', () => {
+  for (const p of posts) {
+    const src = postSource(p.slug);
+    assert.doesNotMatch(src, /\[(Open )?TukdaPay\]\(/, p.slug);
+    assert.doesNotMatch(src, /<Cta href="[^"]*">\s*(Open )?TukdaPay\s*<\/Cta>/, p.slug);
+  }
+});
+
+test('every post body links the splitter or the use cases', () => {
+  for (const p of posts) {
+    assert.match(postSource(p.slug), /\]\(\/(use-cases\/[^)]*)?\)|href="\/(use-cases\/[^"]*)?"/, p.slug);
+  }
+});
+
+test('links between posts point at posts that exist', () => {
+  const slugs = new Set(posts.map((p) => p.slug));
+  for (const p of posts) {
+    for (const [, slug] of postSource(p.slug).matchAll(/\/blog\/([a-z0-9-]+)\//g)) {
+      assert.ok(slugs.has(slug), `${p.slug} links /blog/${slug}/, which has no entry in content/posts.ts`);
+    }
   }
 });

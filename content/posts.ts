@@ -3,31 +3,51 @@ export interface PostMeta {
   title: string;
   description: string;
   date: string; // ISO date, YYYY-MM-DD
+  /** ISO date (YYYY-MM-DD) of the last change to what the post says. Leave unset until the content changes after `date`; never bump it for design or CSS changes. */
+  updated?: string;
 }
 
 export const posts: PostMeta[] = [
   {
+    slug: 'cant-pay-more-than-2000-upi',
+    title: "Can't pay more than ₹2000 on UPI? What to check",
+    description:
+      "UPI payment above ₹2000 won't go through? Check the message: a QR from your gallery, a new phone or PIN, a bank limit or a RuPay credit card, and what to try.",
+    date: '2026-09-17',
+  },
+  {
+    slug: 'rupay-credit-card-upi-2000-limit',
+    title: 'RuPay credit card on UPI: ₹2000 limit reached?',
+    description:
+      'RuPay credit card payment on UPI stopped at ₹2000? Check whether the limit is per payment or per day, where issuers publish it, and when paying in parts helps.',
+    date: '2026-09-17',
+  },
+  {
     slug: 'split-upi-payment-above-2000',
     title: 'How to split a UPI payment above ₹2000',
-    description: 'Step-by-step: break a bill over ₹2000 into UPI payments of ₹1999 or less and pay each one from GPay, PhonePe or Paytm.',
+    description:
+      'Step by step: pay a bill of more than ₹2000 as several UPI payments of ₹1,999 or less from GPay, PhonePe or Paytm, and what to tell the shop first.',
     date: '2026-09-17',
   },
   {
     slug: 'upi-2000-threshold-what-to-check',
-    title: 'The ₹2000 UPI threshold: what to check before you pay',
-    description: 'Per-transaction UPI rules change often. How to find out what actually applies to your payment today, from the sources that decide it.',
+    title: 'UPI charges above ₹2000: how to check what applies',
+    description:
+      'Fee on the shop, a charge on you, or a cap on a benefit? What "₹2000" means in UPI news, and where NPCI, RBI and PIB publish what applies today.',
     date: '2026-09-17',
   },
   {
     slug: 'does-splitting-upi-save-money',
-    title: 'Does splitting a UPI payment actually save money?',
-    description: 'A worked example of when paying a bill in parts saves a per-transaction charge, when it saves nothing, and what it costs in time.',
+    title: 'Does splitting a UPI payment above ₹2000 save money?',
+    description:
+      'A worked ₹5,000 example: who a charge above ₹2000 would land on, when paying in parts changes anything, when it saves nothing, and what it costs in time.',
     date: '2026-09-17',
   },
   {
     slug: 'how-upi-deep-links-work',
-    title: 'How upi://pay deep links work',
-    description: 'The upi://pay URL scheme explained for developers: parameters, encoding, what apps do with it, and what a web page can and cannot know.',
+    title: 'UPI deep links: upi://pay format and parameters',
+    description:
+      "The upi://pay link format for developers: pa, pn, am, cu, tn and tr, encoding, what UPI apps do on tap, QR codes, and what a web page can't know.",
     date: '2026-09-17',
   },
 ];

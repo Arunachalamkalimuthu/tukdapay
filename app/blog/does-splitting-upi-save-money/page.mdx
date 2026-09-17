@@ -4,9 +4,13 @@ export const metadata = postMetadata('does-splitting-upi-save-money')
 
 export default postLayout('does-splitting-upi-save-money')
 
-<Lede>Only when there's a charge that starts above a threshold. Here's how to tell, with real numbers.</Lede>
+<Lede>Only when there's a charge that starts above a threshold and lands on you. Here's how to tell, with a worked example.</Lede>
 
-## The example
+## First, check who a charge lands on
+
+A charge on a UPI payment can fall on the shop or on you, and only a charge on you changes what you pay. NPCI's September 2026 FAQs on the merchant discount rate ([PDF](https://www.npci.org.in/uploads/FA_Qs_Merchant_Discount_Rate_MDR_on_Select_UPI_P2_M_Transactions_58dba1d39e.pdf)) cover consumers in question 15 and whether a shop can pass the fee on in question 34. [Here's how to check what applies](/blog/upi-2000-threshold-what-to-check/).
+
+## If a charge did land on you
 
 Suppose a rule adds a 1% charge to UPI payments above ₹2,000 (an invented figure — [check what really applies](/blog/upi-2000-threshold-what-to-check/)). You owe ₹5,000.
 
@@ -19,7 +23,7 @@ Saving: ₹50 for about forty extra seconds and two more PIN entries.
 
 ## When it saves nothing
 
-- **The charge is on the merchant, not you.** Then your bill is the same either way. The merchant may still prefer split payments, or may not.
+- **The charge is on the merchant, not you.** Then your bill is the same either way, so ask the shop before you split. If you're the merchant, see [what merchants can do](/use-cases/#merchants).
 - **The charge is flat, not tiered.** If every payment costs ₹X, three payments cost 3X. Splitting makes it worse.
 - **The threshold is per day, not per payment.** Then parts add up and you're back where you started.
 - **There is no charge.** Then there's nothing to save, and one payment is simpler.
@@ -28,10 +32,10 @@ Saving: ₹50 for about forty extra seconds and two more PIN entries.
 
 - One PIN entry per part.
 - A merchant who has to match three payments to one bill. Put the invoice number in the note; TukdaPay adds *Part 1/3* and so on automatically.
-- Daily UPI limits. If your bank caps how much you can send by UPI in a day, splitting doesn't change the total.
+- Daily UPI limits. If your bank caps how much you can send by UPI in a day, splitting doesn't change the total. Here's [where to see your UPI limits](/blog/cant-pay-more-than-2000-upi/).
 
 ## A rule of thumb
 
-Split when the charge is *tiered by amount*, *lands on you*, and the saving is worth a few extra taps. Otherwise pay in one go.
+Pay in one go when you can. Paying in parts is for when one payment won't go through, or when the shop asks for it that way, and either way, ask the shop first.
 
 <Cta href="/">Try the numbers in TukdaPay</Cta>
