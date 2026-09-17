@@ -15,14 +15,18 @@ const sans = Bricolage_Grotesque({
   display: 'swap',
 });
 
+// Home title and description lead with what people search for; ₹2000 stays ungrouped because that's how
+// they type it. Other pages set their own through pageMetadata (lib/metadata.ts).
+const HOME_DESCRIPTION =
+  'Split a bill over ₹2000 into UPI payments of ₹1,999 or less and pay each from GPay, PhonePe, Paytm or any UPI app. Free, no signup, nothing leaves your phone.';
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'TukdaPay – Split UPI payments above ₹2000 into smaller parts',
+    default: 'Split a UPI payment above ₹2000 into parts – TukdaPay',
     template: '%s – TukdaPay',
   },
-  description:
-    'Free UPI payment splitter. Break a bill over ₹2000 into payments of ₹1999 or less and pay each one from GPay, PhonePe, Paytm or any UPI app. No signup, no backend.',
+  description: HOME_DESCRIPTION,
   applicationName: SITE_NAME,
   alternates: { canonical: '/', types: FEED_ALTERNATE },
   openGraph: {
@@ -30,14 +34,23 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     locale: 'en_IN',
     url: '/',
-    title: 'TukdaPay – Split UPI payments above ₹2000',
-    description: 'Break a big UPI bill into parts of ₹1999 or less and pay each from your own UPI app. Free, no signup.',
+    title: 'Split a UPI payment above ₹2000 into parts',
+    description: HOME_DESCRIPTION,
     images: [OG_IMAGE],
   },
-  twitter: { card: 'summary_large_image' },
-  icons: { icon: '/favicon.svg', apple: { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' } },
+  // Title and description come from openGraph; the image is set so its alt text is written too.
+  twitter: { card: 'summary_large_image', images: [OG_IMAGE] },
+  // Google Search doesn't use SVG favicons, so the PNG comes first; browsers that read SVG still get it.
+  icons: {
+    icon: [
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    apple: { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
+  },
   manifest: '/manifest.webmanifest',
-  robots: { index: true, follow: true },
+  // Inherited by every page that doesn't set its own; the 404 page drops it and Next writes noindex there.
+  robots: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1, 'max-video-preview': -1 },
 };
 
 // The browser bar matches the page's paper colour in each theme.

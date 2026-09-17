@@ -134,6 +134,23 @@ body:has(.page-home) { --container: 440px; }
   body:has(.page-home) { --container: 1120px; }
 }
 
+/* ===== Font fallback for Android =====
+ * next/font sizes its fallback face to Bricolage's metrics, but on local(Arial), which Android doesn't have.
+ * There the text falls through to Roboto at its own size, so lines rewrap and the page jumps when Bricolage
+ * arrives. This face does the same for Roboto, with next/font's method and metrics (capsize data):
+ * size-adjust = (470/1000) / (911/2048); ascent and descent = 930 and 270 / (1000 × size-adjust).
+ * Where Arial exists, next/font's face comes first in the stack and this one isn't used.
+ */
+@font-face {
+  font-family: 'Bricolage Fallback Android';
+  src: local('Roboto'), local('Roboto Regular'), local('Roboto-Regular');
+  font-weight: 100 900;
+  size-adjust: 105.66%;
+  ascent-override: 88.02%;
+  descent-override: 25.55%;
+  line-gap-override: 0%;
+}
+
 /* ===== Base ===== */
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
@@ -141,7 +158,7 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  font-family: var(--font-sans), 'Bricolage Fallback Android', system-ui, sans-serif;
   font-size: var(--text-body);
   line-height: 1.55;
   font-variant-numeric: tabular-nums;
