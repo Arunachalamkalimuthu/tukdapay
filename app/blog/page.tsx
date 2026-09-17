@@ -11,7 +11,7 @@ import s from './page.module.css';
 
 // ₹2000 without a comma in the title and description, the way people search for it; the page itself groups it.
 const DESCRIPTION =
-  'Plain-language UPI guides: how to split a payment above ₹2000, what to check before you pay, whether splitting saves money, and how upi://pay links work.';
+  'Plain-language UPI guides: what to check when a payment above ₹2000 won’t go through, how to pay in parts, where the rules are published, and upi://pay links.';
 
 export const metadata = pageMetadata({
   title: 'UPI guides: payments above ₹2000 and upi:// links',

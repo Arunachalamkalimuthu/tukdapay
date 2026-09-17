@@ -13,8 +13,15 @@ import { SITE_URL } from '@/lib/site';
 /** Where the byline links: the About page says who writes the posts. */
 export const AUTHOR_PAGE = '/about/';
 
-/** The posts' author in JSON-LD: the name the byline shows, with the page the byline links as the URL. */
-export const POST_AUTHOR: PersonNode = { ...AUTHOR, url: `${SITE_URL}${AUTHOR_PAGE}` };
+/**
+ * The posts' author in JSON-LD: the name the byline shows, with the page the byline links as the URL. The About page's
+ * JSON-LD describes only the Organization, so sameAs keeps the author's GitHub profile to say who the person is.
+ */
+export const POST_AUTHOR: PersonNode & { sameAs: string[] } = {
+  ...AUTHOR,
+  url: `${SITE_URL}${AUTHOR_PAGE}`,
+  sameAs: [AUTHOR.url],
+};
 
 type Dated = Pick<PostMeta, 'date' | 'updated'>;
 

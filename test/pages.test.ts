@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import sitemap, { sitemapEntries } from '../app/sitemap.ts';
 import {
   POST_AUTHOR,
@@ -12,6 +12,7 @@ import {
   postStructuredData,
 } from '../components/blog/postData.ts';
 import { posts, type PostMeta } from '../content/posts.ts';
+import { useCases } from '../content/useCases.ts';
 import { PAGE_CARDS } from '../lib/og.ts';
 import { toRfc822 } from '../lib/rss.ts';
 import { AUTHOR, PUBLISHER } from '../lib/schema.ts';
@@ -82,9 +83,16 @@ test('a post’s article modified time is its updated date, or the publish date 
   assert.equal(edited.modifiedTime, '2026-10-03');
 });
 
-test('the post author is the person named on the page, with the About page as their URL', () => {
-  assert.deepEqual(POST_AUTHOR, { '@type': 'Person', name: AUTHOR.name, url: 'https://tukdapay.com/about/' });
+test('the post author is the person named on the page, with the About page as their URL and their GitHub as sameAs', () => {
+  assert.deepEqual(POST_AUTHOR, {
+    '@type': 'Person',
+    name: AUTHOR.name,
+    url: 'https://tukdapay.com/about/',
+    sameAs: ['https://github.com/Arunachalamkalimuthu'],
+  });
   assert.equal(POST_AUTHOR.name, 'Arunachalam Kalimuthu');
+  // The About page's JSON-LD describes only the Organization, so sameAs is what still identifies the person.
+  assert.deepEqual(POST_AUTHOR.sameAs, [AUTHOR.url]);
 });
 
 test('a post’s JSON-LD is one graph: the BlogPosting and its breadcrumbs', () => {
@@ -180,6 +188,46 @@ test('the merchant section on /use-cases/ can be linked as #merchants', () => {
   assert.match(source('app/use-cases/page.tsx'), /<section id="merchants"[^>]*aria-labelledby="merchants-title"/);
 });
 
+/** Every /use-cases/#<fragment> in a post, as [post directory, fragment]. */
+function useCaseFragmentsInPosts(): [string, string][] {
+  const blog = new URL('../app/blog/', import.meta.url);
+  const found: [string, string][] = [];
+  for (const dir of readdirSync(blog, { withFileTypes: true })) {
+    const file = new URL(`${dir.name}/page.mdx`, blog);
+    if (!dir.isDirectory() || !existsSync(file)) continue;
+    for (const [, frag] of readFileSync(file, 'utf8').matchAll(/\/use-cases\/#([\w-]+)/g)) found.push([dir.name, frag]);
+  }
+  return found;
+}
+
+test('posts link a part of /use-cases/ that lands with its top rule on screen', () => {
+  const links = useCaseFragmentsInPosts();
+  assert.ok(links.length > 0, 'no post links a part of /use-cases/; the fragment check below would pass vacuously');
+  // Sections (the merchant section, each bill) carry the scroll margin, so link them by their own ids. The merchant
+  // heading's id is the one exception: posts linked it before the section had an id, so it gets the same landing.
+  const sections = new Set(['merchants', ...useCases.map((u) => u.slug)]);
+  for (const [post, frag] of links) {
+    assert.ok(
+      sections.has(frag) || frag === 'merchants-title',
+      `app/blog/${post}/page.mdx links /use-cases/#${frag}; link the section (#merchants or a use case slug) instead`,
+    );
+  }
+});
+
+test('the merchant heading lands where the merchant section does: scroll margin plus the section’s padding and rule', () => {
+  const css = source('app/use-cases/page.module.css');
+  const rule = (selector: string) => {
+    const m = new RegExp(`(?:^|\\n)${selector.replace('.', '\\.')}\\s*\\{([^}]*)\\}`).exec(css);
+    assert.ok(m, `no ${selector} rule in app/use-cases/page.module.css`);
+    return m[1];
+  };
+  const section = rule('.merchants');
+  assert.match(section, /padding-top:\s*var\(--space-32\)/);
+  assert.match(section, /border-top:\s*1px solid/);
+  assert.match(section, /scroll-margin-top:\s*var\(--space-16\)/);
+  assert.match(rule('.merchants h2'), /scroll-margin-top:\s*calc\(var\(--space-16\) \+ var\(--space-32\) \+ 1px\)/);
+});
+
 test('/use-cases/ links the how-to, the ₹2000 check and the save-money posts', () => {
   const page = source('app/use-cases/page.tsx');
   for (const slug of ['split-upi-payment-above-2000', 'upi-2000-threshold-what-to-check', 'does-splitting-upi-save-money']) {
@@ -193,5 +241,19 @@ test('/use-cases/ never offers splitting as a way to keep payments small or to s
   assert.doesNotMatch(page, /keep each payment small/i);
   // The plan's first draft of the save-money link read as a promise; the link says what the post covers instead.
   assert.doesNotMatch(page, /splitting a UPI payment saves money/i);
-  assert.match(page, /Ask the shop first\./);
+  assert.match(page, /Ask the shop\s+before you split\./);
+  // D1: it's one payment that won't go through, not the bill. JSX wraps lines, so any whitespace between words.
+  assert.match(page, /when\s+one\s+payment\s+won’t\s+go\s+through/);
+  assert.doesNotMatch(page, /when\s+a\s+bill\s+won’t\s+go\s+through/);
+});
+
+test('/blog/ never frames its guides as saving money, and its description leads with a payment that won’t go through (D1, D4)', () => {
+  const page = source('app/blog/page.tsx');
+  assert.doesNotMatch(page, /saves? money/i);
+  const m = /const DESCRIPTION =\s*'([^']+)';/.exec(page);
+  assert.ok(m, 'app/blog/page.tsx: no single-quoted DESCRIPTION');
+  const description = m[1];
+  assert.match(description, /what to check when a payment above ₹2000 won’t go through/);
+  assert.doesNotMatch(description, /₹2,000/, 'meta descriptions keep ₹2000 without a comma');
+  assert.ok(description.length >= 70 && description.length <= 160, `description is ${description.length} characters`);
 });

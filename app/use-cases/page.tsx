@@ -46,8 +46,8 @@ export default function UseCasesPage() {
         <h1>Bills people pay in tukde</h1>
         <p>
           Tukde means pieces: one bill paid as a few smaller UPI payments. Corner shops, chemists, tutors and homestays
-          often take only UPI, and plenty of everyday bills cross ₹2,000. Splitting is one way to pay when a bill won’t
-          go through in one go, or when the shop asks for it. Ask the shop first.
+          often take only UPI, and plenty of everyday bills cross ₹2,000. Splitting is one way to pay when one payment
+          won’t go through, or when the shop asks for it. Ask the shop before you split.
         </p>
         <p>
           Here are eight of these bills, each with the exact split TukdaPay makes at {formatRupees(DEFAULT_MAX)} a
@@ -109,7 +109,8 @@ export default function UseCasesPage() {
         })}
       </div>
 
-      {/* Posts link this section as /use-cases/#merchants, so keep its id. */}
+      {/* Posts link this section as /use-cases/#merchants or by its heading, #merchants-title, so keep both ids.
+          The heading's scroll margin (page.module.css) lands both in the same place; test/pages.test.ts checks. */}
       <section id="merchants" className={s.merchants} aria-labelledby="merchants-title">
         <h2 id="merchants-title">If you’re the merchant</h2>
         <ul role="list">
