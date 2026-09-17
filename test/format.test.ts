@@ -185,6 +185,37 @@ test('numberRuns finds each number in a line of text, currency aside', () => {
   assert.deepEqual(numberRuns('abc'), []);
 });
 
+test('numberRuns reads digit groups split by single spaces as one number when they group like an amount', () => {
+  // Western groups (1–3 digits, then threes) and Indian groups (1–2 digits, then twos, then a three).
+  assert.deepEqual(numberRuns('4 999'), ['4999']);
+  assert.deepEqual(numberRuns('₹ 4 999'), ['4999']);
+  assert.deepEqual(numberRuns('Rs. 4 999/-'), ['4999']);
+  assert.deepEqual(numberRuns('12 345'), ['12345']);
+  assert.deepEqual(numberRuns('1 000 000'), ['1000000']);
+  assert.deepEqual(numberRuns('1 00 000'), ['100000']);
+  assert.deepEqual(numberRuns('10 00 000.50'), ['1000000.50']);
+  assert.deepEqual(numberRuns('4 999 for 2 items'), ['4999', '2']);
+  // A no-break space, narrow no-break space or thin space, as number formatting and some PDFs write them.
+  for (const space of [' ', ' ', ' ']) assert.deepEqual(numberRuns(`4${space}999`), ['4999'], JSON.stringify(space));
+});
+
+test('numberRuns keeps numbers apart when the spaces between them aren’t digit grouping', () => {
+  assert.deepEqual(numberRuns('5000 x 2'), ['5000', '2']);
+  assert.deepEqual(numberRuns('Total: 4,999 for 2 items'), ['4,999', '2']);
+  assert.deepEqual(numberRuns('4999 and 50'), ['4999', '50']);
+  assert.deepEqual(numberRuns('1e5'), ['1', '5']);
+  // Every group has to fit, or none are joined.
+  assert.deepEqual(numberRuns('12 34 56 7'), ['12', '34', '56', '7']);
+  assert.deepEqual(numberRuns('4 999 5'), ['4', '999', '5']);
+  assert.deepEqual(numberRuns('5000 999'), ['5000', '999']);
+  assert.deepEqual(numberRuns('100 00 000'), ['100', '00', '000']);
+  assert.deepEqual(numberRuns('4 9999'), ['4', '9999']);
+  assert.deepEqual(numberRuns('4  999'), ['4', '999']);
+  // A group can't start after a comma or a decimal point.
+  assert.deepEqual(numberRuns('1,000 999'), ['1,000', '999']);
+  assert.deepEqual(numberRuns('4.5 999'), ['4.5', '999']);
+});
+
 test('editAmountInput keeps only the first number of a pasted line, rather than running every number together', () => {
   for (const [pasted, value] of [
     ['Rs 4,999 (incl. GST 18%)', '4,999'],
@@ -192,11 +223,27 @@ test('editAmountInput keeps only the first number of a pasted line, rather than 
     ['₹4,999 - 10% off', '4,999'],
     ['Amount 12,500 Inv no. 318', '12,500'],
     ['5000 x 2', '5000'],
+    ['4999 and 50', '4999'],
+    ['12 34 56 7', '12'],
   ]) {
     assert.deepEqual(edit('', pasted, pasted.length), { value, caret: value.length }, pasted);
   }
   assert.deepEqual(edit('1,000', '15000x2', 7), { value: '15000', caret: 5 });
   assert.deepEqual(edit('5000', '12 x 3', 0), { value: '12', caret: 2 });
+});
+
+test('editAmountInput keeps every digit of an amount pasted with spaces between its digit groups', () => {
+  for (const [pasted, value] of [
+    ['4 999', '4999'],
+    ['₹ 4 999', '4999'],
+    ['Rs. 1 00 000.50', '100000.50'],
+    ['Total: 12 500 for 2 items', '12500'],
+    ['4 999', '4999'],
+  ]) {
+    assert.deepEqual(edit('', pasted, pasted.length), { value, caret: value.length }, pasted);
+  }
+  // A space typed between digits is still a key the field doesn't take.
+  assert.deepEqual(edit('5000', '5 000', 2), { value: '5000', caret: 1 });
 });
 
 /**

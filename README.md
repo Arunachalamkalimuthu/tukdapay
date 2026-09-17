@@ -75,6 +75,15 @@ https://tukdapay.com/?amount=4200&pa=shop@okaxis&pn=Sri%20Stores&note=Sept%20kha
 URL-encode the values. A link only fills in the form; every payment still
 happens in the payer's own UPI app.
 
+`amount` and `max` are read like a pasted amount: commas, spaces between digit
+groups (`4%20999`), ₹, Rs. and INR are fine, but a value with more than one
+number in it, such as `5000x2`, is ignored.
+
+Opening a link again for a split that is still in progress (the same amount,
+UPI ID, name, note and max) brings that split back with its paid ticks, and
+drops the parameters from the address as a split does; once every part is
+paid, the link starts a new split.
+
 ## Good to know
 
 - A web page can't see whether a UPI payment went through, so "Paid" is
@@ -124,6 +133,8 @@ app/
   blog/page.tsx            /blog/
   blog/<slug>/page.mdx     one post per folder
   blog/feed.xml/route.ts   /blog/feed.xml (RSS)
+  llms.txt/route.ts        /llms.txt, for AI systems and agents (see SEO)
+  llms-full.txt/route.ts   /llms-full.txt, the full text of the pages and posts
   og/[image]/route.tsx     /og/<key>.png share cards, rendered at build time
   sitemap.ts               /sitemap.xml
   robots.ts                /robots.txt
@@ -148,15 +159,18 @@ lib/                       pure logic, no React
   strip.ts                 tukda strip layout: piece widths, modes, figures
   qr.ts                    QR code modules to an SVG path
   format.ts                ₹ formatting and amount parsing
+  cx.ts                    cx(): joins class names, skipping the ones left out
   storage.ts               localStorage helpers that never throw
   prefill.ts               reads the prefill query parameters
   recent.ts                recent merchants list
   rss.ts                   RSS feed XML, newestFirst()
+  llms.ts                  /llms.txt and /llms-full.txt text, with PAGE_COPY (the page words they repeat)
+  markdown.ts              MDX and JSX to Markdown with absolute links, for llms-full.txt
   metadata.ts              pageMetadata() for every page except home
   schema.ts                JSON-LD builders
   og.ts                    share card list and title fitting
   nav.ts                   which header link is the section you're in (aria-current)
-  routeFocus.ts            whether a page change left focus outside <main>
+  routeFocus.ts            whether a page change left focus outside <main>, and where Back puts it
   site.ts                  site-wide constants such as the URL, name, repo link and default max per payment
 scripts/
   check-export.mjs         npm run check:export
@@ -181,12 +195,16 @@ mdx-components.tsx         components every post can use
      description: 'One or two sentences for search results and link previews.',
      date: '2026-10-01',
      // updated: '2026-10-20',
+     // cardTitle: 'Share card text, when the title reads as a fee or limit claim once forwarded',
    },
    ```
 
    - `title` becomes the `<title>` (the layout adds " – TukdaPay"), the H1,
-     the title in post lists and the RSS feed, and the share card text. Keep
-     it to 52 characters or fewer.
+     the title in post lists and the RSS feed, and the share card text unless
+     `cardTitle` is set. Keep it to 52 characters or fewer.
+   - `cardTitle` is optional: the large text on the share card, for a title
+     that would read as a claim about a fee or limit once the card is
+     forwarded without the page. The card's alt text still uses `title`.
    - `description` is 70–160 characters.
    - Write ₹2000 without a comma in both; follow the copy rules in
      [CONTRIBUTING.md](CONTRIBUTING.md#copy).
@@ -216,8 +234,10 @@ mdx-components.tsx         components every post can use
 The build fails if the slug is missing from `content/posts.ts`. `npm test`
 checks title and description lengths, that titles and descriptions write
 ₹2000 without a comma, that the post links the splitter or the use cases,
-that links to other posts and to `/use-cases/#…` sections exist, and that the
-post doesn't repeat a few known NPCI figures. After `npm run build`,
+that links to other posts and to `/use-cases/#…` sections exist, that the
+post doesn't repeat a few known NPCI figures, and that titles, descriptions,
+use cases and post prose use typographic quotes and apostrophes (’ “ ”), not
+straight ones. After `npm run build`,
 `npm run check:export` checks the built page: title, description, canonical
 URL, sitemap and feed entries, share image, JSON-LD and links.
 
@@ -270,13 +290,24 @@ has its own (see [SEO](#seo)).
   time for each post, the blog, use cases and About, using `lib/og.ts` and the
   fonts in `assets/fonts`. Card text says what the page is, never a fee, rate
   or limit.
+- **llms.txt.** `/llms.txt` (`app/llms.txt/route.ts`) tells AI systems and
+  agents what TukdaPay is and isn't, when it fits, how prefill links work, and
+  links every page, following [llmstxt.org](https://llmstxt.org/).
+  `/llms-full.txt` has the same notes, then the full text of home (with the
+  FAQ), use cases, About and every post. Both are written at build time by
+  `lib/llms.ts` from `content/` and the posts' MDX. Words written directly into
+  the home, use cases and About pages are repeated in `PAGE_COPY` in
+  `lib/llms.ts`: when you change them, update it too, or `npm test` fails. The
+  copy rules apply to both files, and the tests check them.
 - **Export check.** After a build, `npm run check:export` checks each exported
   page's title, description, `og:title`, canonical URL, sitemap entry, robots
   meta, H1, share image, JSON-LD (every page has it, with the types above) and
   links to other pages, files and `#` sections. It also checks that the 404
-  page is noindex, that the feed lists every post, that `robots.txt` doesn't
-  block the site and points to the sitemap, that `CNAME` names tukdapay.com,
-  and that the home page's form and steps are in the static HTML. CI doesn't
+  page is noindex, that the feed has exactly one item per post, that
+  `robots.txt` doesn't block the site and points to the sitemap, that `CNAME`
+  names tukdapay.com, that `llms.txt` and `llms-full.txt` start with
+  `# TukdaPay` and every tukdapay.com link in them resolves, and that the home
+  page's form and steps are in the static HTML. CI doesn't
   deploy if it fails. The full list is at the top of
   `scripts/check-export.mjs`, and `test/check-export.test.ts` runs it against
   a small hand-made export.

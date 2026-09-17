@@ -20,12 +20,42 @@ const CURRENCY = /(?<![a-z])(?:rs|re|inr)\.?|₹/gi;
 
 const stripCurrency = (s: string) => s.replace(CURRENCY, '');
 
+/** A space, no-break space, narrow no-break space or thin space: what people and number formatting put between digit groups. */
+const GROUP_SPACE = '[ \\u00a0\\u202f\\u2009]';
+/**
+ * Runs of digits with one space between each, not starting just after a digit, comma or point (or after one of
+ * those and a space): the candidates for an amount written with spaced digit groups ("4 999", "1 00 000").
+ */
+const SPACED_GROUPS = new RegExp(`(?<![\\d.,]|[\\d.,]${GROUP_SPACE})\\d+(?:${GROUP_SPACE}\\d+)+`, 'g');
+
+/**
+ * True when every group fits one way of grouping an amount: western (1–3 digits, then groups of 3, as in
+ * "1 000 000") or Indian (1–2 digits, then groups of 2, then a last group of 3, as in "10 00 000").
+ */
+function isDigitGrouping(groups: readonly string[]): boolean {
+  const [first, ...rest] = groups.map((g) => g.length);
+  const last = rest.at(-1);
+  if (last !== 3) return false;
+  const western = first <= 3 && rest.every((n) => n === 3);
+  const indian = first <= 2 && rest.slice(0, -1).every((n) => n === 2);
+  return western || indian;
+}
+
+/** Joins spaced digit groups into one number ("4 999" -> "4999"), only where every group fits (see isDigitGrouping). */
+const joinDigitGroups = (s: string) =>
+  s.replace(SPACED_GROUPS, (run) => {
+    const groups = run.split(new RegExp(GROUP_SPACE));
+    return isDigitGrouping(groups) ? groups.join('') : run;
+  });
+
 /**
  * Each number in a piece of text, currency aside: "Rs 4,999 (incl. GST 18%)" -> ["4,999", "18"],
- * "2.5e4" -> ["2.5", "4"]. A number is a run of digits with the commas and points inside or around it.
+ * "2.5e4" -> ["2.5", "4"]. A number is a run of digits with the commas and points inside or around it,
+ * or digit groups with a single space between them that group like an amount: "₹ 4 999" -> ["4999"],
+ * "1 00 000" -> ["100000"]. Spaces that don't ("12 34 56 7", "5000 999") keep the numbers apart.
  */
 export function numberRuns(s: string): string[] {
-  return stripCurrency(s).match(/[\d.,]*\d[\d.,]*/g) ?? [];
+  return joinDigitGroups(stripCurrency(s)).match(/[\d.,]*\d[\d.,]*/g) ?? [];
 }
 
 /**

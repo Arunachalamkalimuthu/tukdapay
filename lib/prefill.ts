@@ -1,5 +1,5 @@
 import { isValidAmount, numberRuns, parseAmount } from './format.ts';
-import type { PlanInput } from './plan.ts';
+import { resumablePlan, type Plan, type PlanInput } from './plan.ts';
 import { DEFAULT_MAX } from './site.ts';
 
 /** Query params that prefill the splitter, e.g. /?amount=14999&pa=shop@okaxis */
@@ -85,6 +85,27 @@ export function prefillInput(prefill: Prefill): PlanInput | null {
     note: prefill.note ?? '',
     maxPerTxn: prefill.max ?? DEFAULT_MAX,
   };
+}
+
+export interface OpeningPlan {
+  plan: Plan | null;
+  /**
+   * True when a prefill link brought the saved plan back. The page then drops the prefill from the URL, as a split
+   * does: once the last part is ticked the link no longer resumes the plan, so a reload with it would hide the plan.
+   */
+  fromLink: boolean;
+}
+
+/**
+ * The plan a page load shows. Without a prefill, the saved plan. With one, the saved plan only when the link is for
+ * that payment and a part is still to pay (the same link opened again from a chat, mid-way through paying); any other
+ * link fills in a fresh form, and the saved plan stays in storage untouched.
+ */
+export function openingPlan(prefill: Prefill, saved: Plan | null): OpeningPlan {
+  if (!prefill.present) return { plan: saved, fromLink: false };
+  const linked = prefillInput(prefill);
+  const plan = linked && resumablePlan(saved, linked);
+  return { plan, fromLink: plan !== null };
 }
 
 /** Remove the prefill params from a query string, keeping any others. Returns "" or "?rest". */

@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { cx } from '@/lib/cx';
 import { EXAMPLE_PARTS, stripModel, type StripModel } from '@/lib/strip';
 import s from './TukdaStrip.module.css';
 
@@ -40,8 +41,6 @@ export type TukdaStripProps = Common &
         label?: string;
       }
   );
-
-const cx = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(' ');
 
 function Tick({ className }: { className: string }) {
   return (

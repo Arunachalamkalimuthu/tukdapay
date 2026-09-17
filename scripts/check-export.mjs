@@ -17,7 +17,9 @@
  *   and /about/ AboutPage.
  * - Links in page markup (<a href>) on the indexable pages and 404.html that stay on tukdapay.com go to a page
  *   or file in out/, and a #fragment goes to an id on that page.
- * - Each page's RSS alternate link goes to a file in out/, and out/blog/feed.xml has one <item> per post.
+ * - Each page's RSS alternate link goes to a file in out/, and out/blog/feed.xml has exactly one <item> per post.
+ * - out/llms.txt and out/llms-full.txt exist, aren't empty and start with the "# TukdaPay" H1, and every
+ *   https://tukdapay.com link in them goes to a page, file or #fragment in out/, as links in page markup do.
  * - out/robots.txt exists, doesn't disallow the whole site for all crawlers (*), Googlebot or Bingbot, and
  *   points to the sitemap. out/CNAME names tukdapay.com.
  * - The home page keeps its form and the steps ("How to split a UPI payment") in the rendered HTML, not only
@@ -395,38 +397,69 @@ for (const file of ['404.html', '404/index.html', '_not-found/index.html']) {
 }
 
 // ---- Links in page markup ----
+/**
+ * Checks one link found in `where`, resolved against `pageUrl`: a tukdapay.com link must go to a page in out/ (and a
+ * #fragment to an id on it; `markup` is the linking page's own, for "#id" links) or to a file in out/. Returns
+ * whether it was a tukdapay.com link. Other sites, upi:, mailto: and tel: links aren't checked.
+ */
+function checkLink(where, href, pageUrl, markup = '') {
+  let target;
+  let pathname;
+  let id;
+  try {
+    target = new URL(href, pageUrl);
+    pathname = decodeURIComponent(target.pathname);
+    id = decodeURIComponent(target.hash.slice(1));
+  } catch {
+    fail(where, `link to ${href}: not a valid URL`);
+    return false;
+  }
+  if (target.origin !== SITE) return false;
+  if (href.startsWith('#')) {
+    if (id && !hasId(markup, id)) fail(where, `link to ${href}: no id="${id}" on this page`);
+    return true;
+  }
+  if (pathname.endsWith('/')) {
+    const linked = `${SITE}${pathname}`;
+    if (!pageUrls.has(linked)) fail(where, `link to ${href}: not a page in ${OUT}/`);
+    else if (id && !hasId(markupByUrl.get(linked), id)) fail(where, `link to ${href}: no id="${id}" on that page`);
+    return true;
+  }
+  const file = join(OUT, pathname);
+  if (!existsSync(file) || !statSync(file).isFile()) {
+    const page = `${SITE}${pathname}/`;
+    fail(where, `link to ${href}: not a file in ${OUT}/${pageUrls.has(page) ? `; link the page as ${pathname}/` : ''}`);
+  }
+  return true;
+}
+
 let linkCount = 0;
 for (const { where, url: pageUrl, markup } of linkSources) {
   for (const href of new Set(tags(markup, 'a').map((a) => a.href).filter((href) => href !== undefined))) {
-    let target;
-    let pathname;
-    let id;
-    try {
-      target = new URL(href, pageUrl);
-      pathname = decodeURIComponent(target.pathname);
-      id = decodeURIComponent(target.hash.slice(1));
-    } catch {
-      fail(where, `link to ${href}: not a valid URL`);
-      continue;
-    }
-    // Other sites, upi:, mailto: and tel: links aren't checked.
-    if (target.origin !== SITE) continue;
-    linkCount++;
-    if (href.startsWith('#')) {
-      if (id && !hasId(markup, id)) fail(where, `link to ${href}: no id="${id}" on this page`);
-      continue;
-    }
-    if (pathname.endsWith('/')) {
-      const linked = `${SITE}${pathname}`;
-      if (!pageUrls.has(linked)) fail(where, `link to ${href}: not a page in ${OUT}/`);
-      else if (id && !hasId(markupByUrl.get(linked), id)) fail(where, `link to ${href}: no id="${id}" on that page`);
-      continue;
-    }
-    const file = join(OUT, pathname);
-    if (!existsSync(file) || !statSync(file).isFile()) {
-      const page = `${SITE}${pathname}/`;
-      fail(where, `link to ${href}: not a file in ${OUT}/${pageUrls.has(page) ? `; link the page as ${pathname}/` : ''}`);
-    }
+    if (checkLink(where, href, pageUrl, markup)) linkCount++;
+  }
+}
+
+// ---- llms.txt and llms-full.txt ----
+/** tukdapay.com URLs in plain text or Markdown, without the punctuation that ends a sentence or a link. */
+const siteUrlsIn = (text) =>
+  [...text.matchAll(/https:\/\/tukdapay\.com(?![\w.-])[^\s)<>"'`\]]*/g)].map(([url]) => url.replace(/[.,:;!?*_]+$/, ''));
+
+let llmsLinkCount = 0;
+for (const name of ['llms.txt', 'llms-full.txt']) {
+  const file = join(OUT, name);
+  if (!existsSync(file) || !statSync(file).isFile()) {
+    fail(file, `missing: app/${name}/route.ts writes it`);
+    continue;
+  }
+  const text = readFileSync(file, 'utf8');
+  if (text.trim() === '') {
+    fail(file, 'is empty');
+    continue;
+  }
+  if (!text.startsWith(`# ${SITE_NAME}\n`)) fail(file, `doesn't start with "# ${SITE_NAME}", the H1 llmstxt.org asks for`);
+  for (const url of new Set(siteUrlsIn(text))) {
+    if (checkLink(file, url, `${SITE}/${name}`)) llmsLinkCount++;
   }
 }
 
@@ -439,6 +472,10 @@ if (existsSync(feedFile)) {
   for (const url of postUrls) if (!itemLinks.includes(url)) fail(feedFile, `no <item> for ${url}, a post in ${OUT}/`);
   for (const url of itemLinks) {
     if (!postUrls.includes(url)) fail(feedFile, `<item> links ${url || 'nothing'}, which isn't a post in ${OUT}/`);
+  }
+  for (const url of new Set(itemLinks)) {
+    const n = itemLinks.filter((link) => link === url).length;
+    if (n > 1) fail(feedFile, `${n} <item>s link ${url || 'nothing'}`);
   }
 }
 
@@ -510,5 +547,5 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 const linkedFiles = new Set([...checkedFiles.keys()].map((k) => k.split('|')[0])).size;
 const jsonLdCount = [...jsonLdByPage.values()].reduce((n, docs) => n + docs.length, 0);
 console.log(
-  `check-export: ok — ${plural(pages.length, 'indexable page')} match the sitemap, ${plural(linkCount, 'link')} resolve, ${plural(linkedFiles, 'linked file')} present, ${plural(jsonLdCount, 'JSON-LD block')} parse, robots.txt and the feed are in place, 404 is noindex, home content is static.`,
+  `check-export: ok — ${plural(pages.length, 'indexable page')} match the sitemap, ${plural(linkCount, 'link')} resolve, ${plural(linkedFiles, 'linked file')} present, ${plural(jsonLdCount, 'JSON-LD block')} parse, robots.txt and the feed are in place, llms.txt and llms-full.txt are in place with ${plural(llmsLinkCount, 'site link')} resolving, 404 is noindex, home content is static.`,
 );

@@ -136,6 +136,23 @@ function fixture(t: TestContext) {
 <link>${SITE}/blog/</link><item><title>A post</title><link>${SITE}/blog/a-post/</link><guid>${SITE}/blog/a-post/</guid></item>
 </channel></rss>`,
     CNAME: 'tukdapay.com',
+    'llms.txt': [
+      '# TukdaPay',
+      '',
+      '> A fixture for the export check.',
+      '',
+      'Prefill: https://tukdapay.com/?amount=4200&pa=shop@okaxis. See https://tukdapay.com/use-cases/#merchants.',
+      '',
+      '## Pages',
+      '',
+      '- [Splitter](https://tukdapay.com/): Split a bill.',
+      '- [A post](https://tukdapay.com/blog/a-post/): A post.',
+      '- [Full text](https://tukdapay.com/llms-full.txt): Every page.',
+      '- [Feed](https://tukdapay.com/blog/feed.xml): New posts.',
+      '- [Source](https://github.com/Arunachalamkalimuthu/tukdapay): Code.',
+      '',
+    ].join('\n'),
+    'llms-full.txt': ['# TukdaPay', '', '## A post', '', 'URL: https://tukdapay.com/blog/a-post/', '', '`https://tukdapay.com/about/`', ''].join('\n'),
     'og/card.png': png(1200, 630),
     'og.png': png(1200, 630),
     'icons/icon-512.png': png(512, 512),
@@ -215,6 +232,48 @@ test('check-export fails when the feed misses a post or lists a page that isn’
   edit(out, 'blog/feed.xml', (s) => s.replace(/<item>[\s\S]*<\/item>/, '<item><link>https://tukdapay.com/blog/old-post/</link></item>'));
   assertFails(out, /feed\.xml: no <item> for https:\/\/tukdapay\.com\/blog\/a-post\//);
   assertFails(out, /feed\.xml: <item> links https:\/\/tukdapay\.com\/blog\/old-post\/, which isn't a post/);
+});
+
+test('check-export fails when the feed has two <item>s for one post', (t) => {
+  const out = fixture(t);
+  edit(out, 'blog/feed.xml', (s) => s.replace(/(<item>[\s\S]*<\/item>)/, '$1$1'));
+  assertFails(out, /feed\.xml: 2 <item>s link https:\/\/tukdapay\.com\/blog\/a-post\//);
+});
+
+// ---- llms.txt and llms-full.txt ----
+
+test('check-export fails when llms.txt or llms-full.txt is missing or empty', (t) => {
+  const out = fixture(t);
+  rmSync(join(out, 'llms.txt'));
+  assertFails(out, /llms\.txt: missing/);
+
+  const empty = fixture(t);
+  writeFileSync(join(empty, 'llms-full.txt'), '');
+  assertFails(empty, /llms-full\.txt: is empty/);
+});
+
+test('check-export fails when llms.txt or llms-full.txt doesn’t start with the "# TukdaPay" H1', (t) => {
+  const out = fixture(t);
+  edit(out, 'llms.txt', (s) => s.replace('# TukdaPay\n', 'TukdaPay\n'));
+  assertFails(out, /llms\.txt: doesn't start with "# TukdaPay"/);
+
+  const full = fixture(t);
+  edit(full, 'llms-full.txt', (s) => `\n${s}`);
+  assertFails(full, /llms-full\.txt: doesn't start with "# TukdaPay"/);
+});
+
+test('check-export fails on a tukdapay.com link in llms.txt or llms-full.txt that isn’t in the export', (t) => {
+  const page = fixture(t);
+  edit(page, 'llms.txt', (s) => s.replace('https://tukdapay.com/blog/a-post/)', 'https://tukdapay.com/blog/old-post/)'));
+  assertFails(page, /llms\.txt: link to https:\/\/tukdapay\.com\/blog\/old-post\/: not a page/);
+
+  const id = fixture(t);
+  edit(id, 'llms.txt', (s) => s.replace('#merchants.', '#shops.'));
+  assertFails(id, /llms\.txt: link to https:\/\/tukdapay\.com\/use-cases\/#shops: no id="shops" on that page/);
+
+  const file = fixture(t);
+  edit(file, 'llms-full.txt', (s) => s.replace('https://tukdapay.com/about/`', 'https://tukdapay.com/about`'));
+  assertFails(file, /llms-full\.txt: link to https:\/\/tukdapay\.com\/about: not a file .*\/about\//);
 });
 
 // ---- Links in page markup ----

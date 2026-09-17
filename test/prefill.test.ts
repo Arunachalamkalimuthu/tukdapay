@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readPrefill, stripPrefill, prefillInput, PREFILL_KEYS, MAX_TEXT } from '../lib/prefill.ts';
+import { readPrefill, stripPrefill, prefillInput, openingPlan, PREFILL_KEYS, MAX_TEXT } from '../lib/prefill.ts';
+import { createPlan, withPaid } from '../lib/plan.ts';
 import { DEFAULT_MAX } from '../lib/site.ts';
 
 const p = (query: string) => readPrefill(new URLSearchParams(query));
@@ -35,6 +36,18 @@ test('an amount with more than one number in it is ignored, not run together int
   assert.deepEqual(p(`amount=${enc('4,999 for 2 items')}`), { present: false });
   assert.deepEqual(p(`max=${enc('1000 x 2')}`), { present: false });
   assert.equal(p(`amount=${enc('₹ 1,00,000.50 ')}`).amount, 100000.5);
+  assert.deepEqual(p(`amount=${enc('4999 and 50')}`), { present: false });
+  assert.deepEqual(p(`amount=${enc('12 34 56 7')}`), { present: false });
+  assert.deepEqual(p(`amount=${enc('5000 999')}`), { present: false });
+});
+
+test('an amount with spaces between its digit groups is one amount', () => {
+  assert.deepEqual(p('amount=4%20999'), { present: true, amount: 4999 });
+  assert.deepEqual(p('amount=4+999'), { present: true, amount: 4999 });
+  assert.equal(p(`amount=${enc('₹ 4 999')}`).amount, 4999);
+  assert.equal(p(`amount=${enc('Rs. 1 00 000.50')}`).amount, 100000.5);
+  assert.equal(p(`amount=${enc('14 999')}`).amount, 14999);
+  assert.equal(p(`max=${enc('1 999')}`).max, 1999);
 });
 
 test('amounts over the most the page splits are ignored', () => {
@@ -111,6 +124,33 @@ test('prefillInput is the payment a link describes, once it has both the amount 
   assert.equal(prefillInput(p('amount=5000&pn=Tea%20Shop')), null);
   assert.equal(prefillInput(p('pa=shop@okaxis')), null);
   assert.equal(prefillInput(p('')), null);
+});
+
+test('openingPlan without a prefill is the saved plan, whatever its ticks', () => {
+  const saved = createPlan({ total: 5000, pa: 'shop@okaxis', pn: '', note: '', maxPerTxn: DEFAULT_MAX });
+  assert.deepEqual(openingPlan(p(''), saved), { plan: saved, fromLink: false });
+  assert.deepEqual(openingPlan(p('utm_source=chat'), saved), { plan: saved, fromLink: false });
+  const paid = withPaid(withPaid(withPaid(saved, 0, true), 1, true), 2, true);
+  assert.deepEqual(openingPlan(p(''), paid), { plan: paid, fromLink: false });
+  assert.deepEqual(openingPlan(p(''), null), { plan: null, fromLink: false });
+});
+
+test('openingPlan brings back the saved plan through a link for its payment while a part is still to pay', () => {
+  const saved = withPaid(createPlan({ total: 5000, pa: 'shop@okaxis', pn: 'Sri Stores', note: '', maxPerTxn: DEFAULT_MAX }), 0, true);
+  // fromLink: the page then drops the prefill from the URL, so a reload after the last tick still shows the plan.
+  assert.deepEqual(openingPlan(p('amount=5000&pa=shop@okaxis&pn=Sri%20Stores'), saved), { plan: saved, fromLink: true });
+  assert.deepEqual(openingPlan(p('amount=5,000&pa=shop@okaxis&pn=Sri%20Stores&max=1999'), saved), { plan: saved, fromLink: true });
+});
+
+test('openingPlan shows no plan for a link to a paid plan, another payment or a payment without a UPI ID', () => {
+  const input = { total: 5000, pa: 'shop@okaxis', pn: '', note: '', maxPerTxn: DEFAULT_MAX };
+  const paid = withPaid(withPaid(withPaid(createPlan(input), 0, true), 1, true), 2, true);
+  assert.deepEqual(openingPlan(p('amount=5000&pa=shop@okaxis'), paid), { plan: null, fromLink: false });
+  const started = withPaid(createPlan(input), 0, true);
+  assert.deepEqual(openingPlan(p('amount=6000&pa=shop@okaxis'), started), { plan: null, fromLink: false });
+  assert.deepEqual(openingPlan(p('amount=5000&pa=shop@okaxis&note=Rent'), started), { plan: null, fromLink: false });
+  assert.deepEqual(openingPlan(p('amount=5000'), started), { plan: null, fromLink: false });
+  assert.deepEqual(openingPlan(p('amount=5000&pa=shop@okaxis'), null), { plan: null, fromLink: false });
 });
 
 test('PREFILL_KEYS lists every supported param', () => {

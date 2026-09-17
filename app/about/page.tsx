@@ -4,7 +4,7 @@ import { JsonLd } from '@/components/JsonLd';
 import { posts } from '@/content/posts';
 import { pageMetadata } from '@/lib/metadata';
 import { ogCards, ogImage } from '@/lib/og';
-import { organization } from '@/lib/schema';
+import { AUTHOR, organization } from '@/lib/schema';
 import { REPO_URL, SITE_URL } from '@/lib/site';
 import s from './page.module.css';
 
@@ -13,7 +13,6 @@ const TITLE = 'About TukdaPay, a free, open-source UPI payment splitter';
 const DESCRIPTION =
   'Who builds TukdaPay and why, how it’s funded (it isn’t: no ads, no tracking), what it saves in your browser, and how to get in touch.';
 const PATH = '/about/';
-const AUTHOR_URL = 'https://github.com/Arunachalamkalimuthu';
 /** NPCI, Merchant Discount Rate (MDR) on Select UPI (P2M) Transactions – FAQs, 15 Sept 2026. */
 const NPCI_MDR_FAQ_URL =
   'https://www.npci.org.in/uploads/FA_Qs_Merchant_Discount_Rate_MDR_on_Select_UPI_P2_M_Transactions_58dba1d39e.pdf';
@@ -54,7 +53,7 @@ export default function AboutPage() {
 
         <h2 className="t-heading">Who builds it</h2>
         <p>
-          <a href={AUTHOR_URL} rel="author">
+          <a href={AUTHOR.url} rel="author">
             Arunachalam Kalimuthu
           </a>{' '}
           builds and looks after TukdaPay, and writes the <Link href="/blog/">guides on the blog</Link>.

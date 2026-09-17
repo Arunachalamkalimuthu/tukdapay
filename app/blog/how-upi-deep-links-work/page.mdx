@@ -21,7 +21,7 @@ upi://pay?pa=shop@okaxis&pn=Sri%20Tea%20Stall&am=1999.00&cu=INR&tn=Part%201%2F3
 | `tn`  | Transaction note      | Free text, shown to both sides.                |
 | `tr`  | Transaction reference | Merchant reference id. Optional.               |
 
-Values are URL-encoded. The scheme is defined in NPCI’s UPI Linking Specification; the parameters above are the ones every mainstream app honours.
+Values are URL-encoded. The scheme is defined in NPCI’s UPI Linking Specification; the parameters above are the ones TukdaPay uses.
 
 On Android the app opens through an intent, which is why developers also call this a UPI intent link.
 
@@ -31,6 +31,8 @@ On Android the app opens through an intent, which is why developers also call th
 2. Android shows a chooser of apps registered for `upi://` (or opens the default). iOS opens the app registered for the scheme.
 3. The app parses the query, pre-fills the screen, and asks for the UPI PIN.
 4. The app talks to the bank via NPCI. The browser is not involved.
+
+Some apps won’t accept a payment opened from a link, for example to a personal UPI ID. The payer can scan the payee’s QR in their UPI app and type the amount instead.
 
 ## What the page can’t know
 

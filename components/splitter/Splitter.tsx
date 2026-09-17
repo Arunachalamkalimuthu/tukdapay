@@ -26,12 +26,13 @@ import {
   MAX_AMOUNT_TEXT,
   parseAmount,
 } from '@/lib/format';
-import { MAX_TEXT, prefillInput, readPrefill, stripPrefill, type ParamSource } from '@/lib/prefill';
+import { MAX_TEXT, openingPlan, readPrefill, stripPrefill, type ParamSource } from '@/lib/prefill';
 import { parseRecent, rememberMerchant, type RecentMerchant } from '@/lib/recent';
 import { readJson, writeJson } from '@/lib/storage';
 import { DEFAULT_MAX } from '@/lib/site';
 import { collapseText, EXAMPLE_PARTS, EXAMPLE_TOTAL } from '@/lib/strip';
 import { amountReading, amountSize, previewText, resumeNoticeParts, shortReading, splitLabel, vpaParts } from '@/lib/splitter';
+import { cx } from '@/lib/cx';
 import { TukdaStrip } from '@/components/TukdaStrip';
 import { PlanResult } from './PlanResult';
 import s from './Splitter.module.css';
@@ -50,23 +51,33 @@ interface Initial {
   max: string;
   touched: Touched;
   plan: Plan | null;
+  /** The plan came back through a prefill link for its payment (see openingPlan). */
+  fromLink: boolean;
   recent: RecentMerchant[];
 }
 
-const EMPTY: Initial = { total: '', pa: '', pn: '', note: '', max: amountToInput(DEFAULT_MAX), touched: {}, plan: null, recent: [] };
+const EMPTY: Initial = {
+  total: '',
+  pa: '',
+  pn: '',
+  note: '',
+  max: amountToInput(DEFAULT_MAX),
+  touched: {},
+  plan: null,
+  fromLink: false,
+  recent: [],
+};
 
 /**
  * Browser only. Without a URL prefill (?amount=&pa=&pn=&note=&max=), the saved plan comes back. A
  * prefill for the saved plan's payment, while it still has a part to pay, brings that plan back with
  * its ticks too (the same link opened again from a chat, mid-way through paying). Any other prefill
- * starts a fresh form and leaves the saved plan in storage untouched.
+ * starts a fresh form and leaves the saved plan in storage untouched. See openingPlan.
  */
 function loadInitial(params: ParamSource): Initial {
   const recent = parseRecent(readJson(RECENT_KEY));
   const prefill = readPrefill(params);
-  const saved = parsePlan(readJson(PLAN_KEY));
-  const linked = prefillInput(prefill);
-  const plan = prefill.present ? linked && resumablePlan(saved, linked) : saved;
+  const { plan, fromLink } = openingPlan(prefill, parsePlan(readJson(PLAN_KEY)));
   if (prefill.present && !plan) {
     return {
       ...EMPTY,
@@ -86,6 +97,7 @@ function loadInitial(params: ParamSource): Initial {
     ...EMPTY,
     recent,
     plan,
+    fromLink,
     total: amountToInput(input.total),
     pa: input.pa,
     pn: input.pn,
@@ -222,8 +234,6 @@ function RecentChip({ merchant, onPick }: { merchant: RecentMerchant; onPick: ()
 
 const EXAMPLE_TEXT = `Example: ${formatRupees(EXAMPLE_TOTAL)} becomes ${collapseText(EXAMPLE_PARTS)}.`;
 
-const cx = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(' ');
-
 interface FormProps extends SplitterProps {
   initial: Initial;
   placeholder?: boolean;
@@ -259,6 +269,19 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill, howItWorks
   // Keys each amount field has dropped since it last took one (see changeAmount).
   const totalCarry = useRef('');
   const maxCarry = useRef('');
+
+  // A plan brought back by a prefill link: drop the prefill from the URL, as a split does. Once the last part is
+  // ticked the link no longer resumes the plan, so a reload with it would show a fresh form, and Split would then
+  // replace the paid plan. onStripPrefill keeps LiveSplitter from remounting the form when the URL changes.
+  useEffect(() => {
+    if (!initial.fromLink) return;
+    const { pathname, search, hash } = window.location;
+    const rest = stripPrefill(search);
+    if (rest === search) return;
+    onStripPrefill?.();
+    window.history.replaceState(null, '', `${pathname}${rest}${hash}`);
+    // Runs again only as a no-op: the URL has no prefill left, and a new one remounts the form.
+  }, [initial.fromLink, onStripPrefill]);
 
   // After a split: bring the result into view and move focus to its heading.
   useEffect(() => {

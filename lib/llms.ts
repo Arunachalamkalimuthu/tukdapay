@@ -95,12 +95,12 @@ export const PAGE_COPY = {
       '',
       '1. **Enter the bill** and the merchant’s UPI ID from their sticker or invoice.',
       '2. **Split** — TukdaPay breaks it into parts at or under your limit (₹5,000 becomes ₹1,999 + ₹1,999 + ₹1,002), each tagged *Part 1/3*, *Part 2/3*… so the shop can match them.',
-      '3. **Pay each part** — every Pay button opens your own UPI app with the amount filled in. Tick them off as you go.',
+      '3. **Pay each part** — each Pay button opens your UPI app with the amount filled in. Tick them off as you go.',
       '',
       '### Why people use it',
       '',
       '- **Nothing leaves your phone.** No account, no server, no bank details. It only writes `upi://pay` links.',
-      '- **Works with every UPI app.** Google Pay, PhonePe, Paytm, BHIM, CRED, bank apps — on a computer, scan the QR instead.',
+      '- **Works with your UPI app.** Google Pay, PhonePe, Paytm, BHIM, Amazon Pay, CRED, bank apps — on a computer, scan the QR instead.',
       '- **Free and open source.** MIT licensed. Read the code, fork it, fix it.',
     ].join('\n'),
     faqTitle: 'Questions about splitting UPI payments',
@@ -116,10 +116,10 @@ export const PAGE_COPY = {
     ].join('\n'),
     merchantsTitle: 'If you’re the merchant',
     merchants: [
-      '- **Say yes or no up front.** A sign at the counter (“Split UPI payments welcome” or “One payment per bill”) saves a conversation.',
+      '- **Say up front whether you take a bill in parts.** Some customers can’t pay a large bill in one UPI payment; tell them before they start.',
       '- **Look for the part numbers.** TukdaPay tags every payment *Part 1/3*, *Part 2/3*… in the note, so matching them to one bill is a glance.',
       '- **Ask for the breakdown.** Customers can send the list on WhatsApp in one tap; keep it with the bill.',
-      '- **Check what applies to you.** If a payment carries a charge, it may fall on you rather than the customer. Here’s [how to check what applies to a UPI payment above ₹2,000](/blog/upi-2000-threshold-what-to-check/).',
+      '- **Check what applies to you.** Start with your bank’s terms for your UPI QR, and here’s [how to check what applies to a UPI payment above ₹2,000](/blog/upi-2000-threshold-what-to-check/).',
     ].join('\n'),
     ctaTitle: 'Your bill isn’t on the list?',
     cta: [
@@ -304,10 +304,16 @@ function fileLists({ posts, useCases }: LlmsData, siteUrl: string): string {
   ].join('\n');
 }
 
+/**
+ * Plain spaces for the no-break spaces the pages use to keep a figure together (MAX_AMOUNT_TEXT's "₹100 crore"):
+ * a text file has no line breaks to steer, and a search for "₹100 crore" should find it.
+ */
+const plainSpaces = (text: string) => text.replace(/[\u00a0\u202f\u2007]/g, ' ');
+
 /** /llms.txt: the summary, notes on when TukdaPay fits and how to prefill it, and links to every page. */
 export function buildLlmsTxt(data: LlmsData): string {
   const siteUrl = data.siteUrl ?? SITE_URL;
-  return `${header(data, siteUrl)}\n\n${fileLists(data, siteUrl)}\n`;
+  return plainSpaces(`${header(data, siteUrl)}\n\n${fileLists(data, siteUrl)}\n`);
 }
 
 function homeSection({ faq }: LlmsFullData, siteUrl: string): string {
@@ -368,12 +374,12 @@ function postSection(post: LlmsPost, sources: LlmsFullData['postSources'], siteU
 /** /llms-full.txt: llms.txt's header and notes, then the full text of home, use cases, About and every post, newest first. */
 export function buildLlmsFullTxt(data: LlmsFullData): string {
   const siteUrl = data.siteUrl ?? SITE_URL;
-  return `${[
+  return plainSpaces(`${[
     header(data, siteUrl),
     `This file has the full text of the pages ${siteUrl}/llms.txt lists: the home page with its questions and answers, the use cases, the About page and every guide, newest first. Each section starts with its page’s URL.`,
     homeSection(data, siteUrl),
     sectionForUseCases(data, siteUrl),
     aboutSection(siteUrl),
     ...newestFirst(data.posts).map((p) => postSection(p, data.postSources, siteUrl)),
-  ].join('\n\n')}\n`;
+  ].join('\n\n')}\n`);
 }

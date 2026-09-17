@@ -127,7 +127,7 @@ export default function UseCasesPage() {
             the bill.
           </li>
           <li>
-            <strong>Check what applies to you</strong>, including your bank’s terms for your UPI QR. Here’s{' '}
+            <strong>Check what applies to you.</strong> Start with your bank’s terms for your UPI QR, and here’s{' '}
             <Link href="/blog/upi-2000-threshold-what-to-check/">how to check what applies to a UPI payment above ₹2,000</Link>.
           </li>
         </ul>

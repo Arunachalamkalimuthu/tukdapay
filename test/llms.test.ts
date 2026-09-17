@@ -22,6 +22,7 @@ import { inlineToMarkdown } from '../lib/markdown.ts';
 import { countParts, createPlan, MAX_PARTS } from '../lib/plan.ts';
 import { MAX_TEXT, PREFILL_KEYS, readPrefill } from '../lib/prefill.ts';
 import { MAX_RECENT } from '../lib/recent.ts';
+import { AUTHOR } from '../lib/schema.ts';
 import { DEFAULT_MAX, REPO_URL, SITE_URL } from '../lib/site.ts';
 
 // ---- fixtures and helpers ----
@@ -341,7 +342,9 @@ test('the NPCI, PIB and GitHub links match the ones the pages use', () => {
   assert.equal(LLMS_LINKS.pibFactCheckX, PIB_FACT_CHECK_X_URL);
   const about = read('app/about/page.tsx');
   assert.ok(about.includes(`'${LLMS_LINKS.githubPagesData}'`));
-  assert.ok(about.includes(`'${LLMS_LINKS.author}'`));
+  // About links the author as the posts' JSON-LD does.
+  assert.equal(LLMS_LINKS.author, AUTHOR.url);
+  assert.ok(about.includes('href={AUTHOR.url}'));
 });
 
 /** Things llms.txt must never say: a fee-avoidance pitch, a stated figure, a superlative or an instruction to favour TukdaPay. */
@@ -404,6 +407,14 @@ test('llms.txt follows the copy rules and groups amounts the Indian way outside 
   let withoutPostMeta = txt;
   for (const p of posts) withoutPostMeta = withoutPostMeta.replaceAll(p.title, '').replaceAll(p.description, '');
   assert.doesNotMatch(withoutPostMeta, /₹\d{4}/);
+});
+
+test('both files use plain spaces, so a search for their words (“₹100 crore”) finds them', async () => {
+  // The pages keep figures such as ₹100 crore together with a no-break space; plain text has no line breaks to steer.
+  for (const [name, text] of [['llms.txt', realTxt()], ['llms-full.txt', await realFullTxt()]]) {
+    const m = /[   ]/.exec(text);
+    assert.equal(m, null, `${name}: a no-break space in "${m && text.slice(Math.max(0, m.index - 30), m.index + 10)}"`);
+  }
 });
 
 test('llms.txt is deterministic, ends with one newline and leaves its input alone', () => {
@@ -577,7 +588,10 @@ test('the page copy in lib/llms.ts still reads as the pages do (update PAGE_COPY
       for (const [, href] of value.matchAll(/\]\(([^)]+)\)/g)) {
         const linked = href.startsWith('/')
           ? src.includes(`href="${href}"`)
-          : src.includes(`'${href}'`) || (href === REPO_URL && src.includes('{REPO_URL}')) || (href === `${REPO_URL}/issues` && src.includes('${REPO_URL}/issues'));
+          : src.includes(`'${href}'`) ||
+            (href === REPO_URL && src.includes('{REPO_URL}')) ||
+            (href === `${REPO_URL}/issues` && src.includes('${REPO_URL}/issues')) ||
+            (href === AUTHOR.url && src.includes('{AUTHOR.url}'));
         assert.ok(linked, `PAGE_COPY.${name}.${field} links ${href}, which ${page.source} doesn’t`);
       }
     }
@@ -587,8 +601,8 @@ test('the page copy in lib/llms.ts still reads as the pages do (update PAGE_COPY
 
 /** Words on the pages that llms-full.txt leaves out on purpose. */
 const LEFT_OUT: Record<keyof typeof PAGE_COPY, readonly string[]> = {
-  // The three newest posts; llms-full.txt has every post in full.
-  home: ['From the blog'],
+  // The three newest posts (llms-full.txt has every post in full), and the notice shown only without JavaScript.
+  home: ['From the blog', 'The splitter needs JavaScript. Turn it on to split a bill; the guides below work without it.'],
   useCases: [],
   // The button to the splitter.
   about: ['Split a payment'],
@@ -643,27 +657,13 @@ test('beforePosts stops at the first post, whichever post is newest', () => {
   assert.ok(full.startsWith(pages));
 });
 
-/**
- * Words in content/useCases.ts that break the copy rules and are to be reworded there (the electronics story and tip
- * set UPI in parts against a card fee). While they're still in content/useCases.ts, the todo test below reports
- * them and the copy rule check after it skips these exact sentences; once they're reworded, both check everything.
- * Then delete this list.
- */
-const AWAITING_REWORD = ['The card machine is “not working today”.', 'Many prefer it to a card fee, some don’t.'];
-const awaitingReword = AWAITING_REWORD.filter((words) => useCases.some((u) => u.story.includes(words) || u.tip.includes(words)));
-
-test(
-  'no use case sets paying in parts against a card fee (content/useCases.ts)',
-  { todo: awaitingReword.length > 0 && `reword in content/useCases.ts: ${awaitingReword.join(' | ')}` },
-  () => {
-    for (const u of useCases) assertCopyRules(`${u.story}\n${u.tip}`, `content/useCases.ts ${u.slug}`);
-  },
-);
+test('no use case sets paying in parts against a fee or a card (content/useCases.ts)', () => {
+  for (const u of useCases) assertCopyRules(`${u.story}\n${u.tip}`, `content/useCases.ts ${u.slug}`);
+});
 
 test('llms-full.txt follows the copy rules outside the posts, which have their own checks', async () => {
-  let pages = beforePosts(await realFullTxt());
+  const pages = beforePosts(await realFullTxt());
   assert.ok(pages.includes(`\n## ${PAGE_COPY.useCases.title}\n`));
-  for (const words of awaitingReword) pages = pages.replaceAll(words, '');
-  // Use case tips are the page's own words; the fee check still applies to them.
+  // Use case stories and tips are in there too; the fee check applies to them as well.
   assertCopyRules(pages, 'llms-full.txt');
 });

@@ -247,6 +247,18 @@ test('post prose uses typographic quotes and apostrophes; code, links and JSX ke
   }
 });
 
+test('pages and components write apostrophes and quotes in their text as typographic ones, not as HTML entities', () => {
+  // React's lint rule asks for &apos; in JSX text, which renders a straight quote; write ’ “ ” instead.
+  const tsx = (dir: string): string[] =>
+    readdirSync(new URL(`../${dir}/`, import.meta.url), { withFileTypes: true }).flatMap((entry) =>
+      entry.isDirectory() ? tsx(`${dir}/${entry.name}`) : entry.name.endsWith('.tsx') ? [`${dir}/${entry.name}`] : [],
+    );
+  for (const file of [...tsx('app'), ...tsx('components'), ...tsx('content')]) {
+    const src = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
+    assert.doesNotMatch(src, /&(apos|quot|#39|#x27|#34|#x22);/i, file);
+  }
+});
+
 test('a post’s updated date, when set, is a real date on or after its publish date', () => {
   for (const p of posts) {
     assert.doesNotThrow(() => toRfc822(p.date), `${p.slug}: date`);

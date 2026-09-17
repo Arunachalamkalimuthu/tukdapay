@@ -7,7 +7,7 @@ export function SiteFooter() {
     <footer className={styles.foot}>
       <div className={styles.inner}>
         <p>
-          TukdaPay is a free, open-source tool. It doesn&apos;t move money and can&apos;t see whether a payment went
+          TukdaPay is a free, open-source tool. It doesn’t move money and can’t see whether a payment went
           through.
         </p>
         <ul className={styles.links}>
