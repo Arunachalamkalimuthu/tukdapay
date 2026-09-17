@@ -10,10 +10,18 @@
  *   og:title that says more than "Blog" or "Use cases" (and the same twitter:title), og:image and
  *   twitter:image:alt. Share images on tukdapay.com exist in out/, and share cards are 1200×630 PNGs of
  *   300KB or less (WhatsApp skips larger previews).
- * - JSON-LD parses; every tukdapay.com URL in it exists in out/ (pages, #fragments, logo and images); a node
- *   isn't defined twice with different values; "#" ids it refers to are defined on the same page. Once home
- *   uses the site's "#" ids (the lib/schema.ts graph), it must carry one WebSite and the Organization.
- * - The home page keeps its form and "How it works" in the rendered HTML, not only in the RSC payload.
+ * - Every indexable page has JSON-LD, and it parses; every tukdapay.com URL in it exists in out/ (pages,
+ *   #fragments, logo and images); a node isn't defined twice with different values; "#" ids it refers to are
+ *   defined on the same page. Home carries one WebSite and the Organization (the lib/schema.ts graph) plus
+ *   WebApplication and FAQPage; /blog/ has Blog, each post BlogPosting and BreadcrumbList, /use-cases/ ItemList
+ *   and /about/ AboutPage.
+ * - Links in page markup (<a href>) on the indexable pages and 404.html that stay on tukdapay.com go to a page
+ *   or file in out/, and a #fragment goes to an id on that page.
+ * - Each page's RSS alternate link goes to a file in out/, and out/blog/feed.xml has one <item> per post.
+ * - out/robots.txt exists, doesn't disallow the whole site for all crawlers (*), Googlebot or Bingbot, and
+ *   points to the sitemap. out/CNAME names tukdapay.com.
+ * - The home page keeps its form and the steps ("How to split a UPI payment") in the rendered HTML, not only
+ *   in the RSC payload.
  *
  * No dependencies. Exits 1 and lists every failure.
  */
@@ -35,6 +43,19 @@ const LOGO_MIN_PX = 112;
 const NOT_PAGES = new Set(['404', '_not-found']);
 const SITE_NAME = 'TukdaPay';
 const ORG_ID = `${SITE}/#organization`;
+/**
+ * JSON-LD types each page describes itself with, by its directory in out/. Home's WebSite and Organization are
+ * checked on their own below.
+ */
+const REQUIRED_TYPES = [
+  [/^$/, ['WebApplication', 'FAQPage']],
+  [/^blog\/$/, ['Blog']],
+  [/^blog\/[^/]+\/$/, ['BlogPosting', 'BreadcrumbList']],
+  [/^use-cases\/$/, ['ItemList']],
+  [/^about\/$/, ['AboutPage']],
+];
+/** User-agent groups in robots.txt that must never disallow the whole site. */
+const SEARCH_AGENTS = ['*', 'googlebot', 'bingbot'];
 
 const failures = [];
 const fail = (where, message) => failures.push(`${where}: ${message}`);
@@ -94,12 +115,16 @@ const meta = (h, key, value) =>
   tags(h, 'meta')
     .filter((m) => (m[key] ?? '').toLowerCase() === value.toLowerCase())
     .map((m) => m.content ?? '');
-const canonicals = (h) => tags(h, 'link').filter((l) => (l.rel ?? '').toLowerCase().split(/\s+/).includes('canonical'));
+const linksWithRel = (h, rel) => tags(h, 'link').filter((l) => (l.rel ?? '').toLowerCase().split(/\s+/).includes(rel));
+const canonicals = (h) => linksWithRel(h, 'canonical');
 /** Lower-case rules from every <meta name=`name`>, e.g. ["index", "max-snippet:-1"]. */
 const robotsTokens = (h, name = 'robots') =>
   meta(h, 'name', name).flatMap((c) => c.split(',').map((t) => t.trim().toLowerCase().replace(/\s*:\s*/, ':')));
 const blocksIndexing = (tokens) => tokens.some((t) => t === 'noindex' || t === 'none');
 const chars = (s) => Array.from(s).length;
+const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/** Whether markup (HTML without scripts) has an element with this id. */
+const hasId = (markup, id) => new RegExp(`\\sid="${escapeRegExp(id)}"`).test(markup);
 
 /** Width and height from a PNG's IHDR, or null if the file isn't a PNG. */
 function pngSize(buf) {
@@ -147,6 +172,10 @@ const pageCanonicals = new Map();
 const markupByUrl = new Map();
 /** page file -> JSON-LD documents that parsed */
 const jsonLdByPage = new Map();
+/** page file -> its directory in out/ ("" for home, "blog/" for /blog/) */
+const dirByPage = new Map();
+/** Pages whose <a href>s are checked once every page has been read: file, URL and markup. */
+const linkSources = [];
 
 for (const page of pages) {
   const where = `${OUT}/${page}`;
@@ -156,6 +185,8 @@ for (const page of pages) {
   const dir = page.slice(0, -'index.html'.length);
   const expected = `${SITE}/${dir}`;
   markupByUrl.set(expected, markup);
+  dirByPage.set(where, dir);
+  linkSources.push({ where, url: expected, markup });
 
   const links = canonicals(h);
   if (links.length !== 1) fail(where, `expected one canonical link, found ${links.length}`);
@@ -212,9 +243,13 @@ for (const page of pages) {
   for (const url of ogImages) checkFile(where, 'og:image', url);
   for (const url of meta(h, 'name', 'twitter:image')) checkFile(where, 'twitter:image', url);
   if (meta(h, 'name', 'twitter:image:alt').filter((alt) => alt.trim()).length === 0) fail(where, 'no twitter:image:alt');
+  for (const feed of linksWithRel(h, 'alternate').filter((l) => (l.type ?? '').toLowerCase() === 'application/rss+xml')) {
+    checkFile(where, 'RSS alternate', new URL(feed.href ?? '', `${SITE}/`).href);
+  }
 
   const documents = [];
   const blocks = scripts(html).filter((script) => (script.type ?? '').trim().toLowerCase() === 'application/ld+json');
+  if (blocks.length === 0) fail(where, 'no JSON-LD: every indexable page renders <JsonLd> (built with lib/schema.ts)');
   for (const [i, block] of blocks.entries()) {
     try {
       documents.push(JSON.parse(block.text));
@@ -282,15 +317,16 @@ function readJsonLd(documents) {
 }
 
 const HOME_FILE = `${OUT}/index.html`;
-/** Whether home's JSON-LD is the site graph from lib/schema.ts (it uses the "#" ids) or has a WebSite node. */
-let homeUsesSiteGraph = false;
 const readByPage = new Map();
 for (const [where, documents] of jsonLdByPage) {
   const read = readJsonLd(documents);
   readByPage.set(where, read);
-  if (where === HOME_FILE) {
-    const ids = [...read.nodes.map((n) => n['@id']), ...read.refs].filter((id) => typeof id === 'string');
-    homeUsesSiteGraph = ids.some((id) => id.startsWith(`${SITE}/#`)) || read.nodes.some((n) => typesOf(n).includes('WebSite'));
+
+  const types = new Set(read.nodes.flatMap(typesOf));
+  const dir = dirByPage.get(where);
+  for (const [pattern, required] of REQUIRED_TYPES) {
+    if (!pattern.test(dir)) continue;
+    for (const type of required) if (!types.has(type)) fail(where, `JSON-LD has no ${type} node (expected ${required.join(' and ')})`);
   }
 
   // The same @id defined twice is one node to a parser; two different values for a property is a bug.
@@ -320,15 +356,14 @@ for (const [where, documents] of jsonLdByPage) {
     }
     const pageUrl = `${SITE}${pathname}`;
     if (!pageUrls.has(pageUrl)) fail(where, `${property}: ${url} is not an indexable page in ${OUT}/`);
-    else if (hash && !new RegExp(`\\sid="${hash.slice(1).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`).test(markupByUrl.get(pageUrl))) {
+    else if (hash && !hasId(markupByUrl.get(pageUrl), hash.slice(1))) {
       fail(where, `${property}: ${url} points at an id that isn't on that page`);
     }
   }
 }
 
-// Google reads the site name from a WebSite node on the home page. Checked once home carries the site graph
-// (SEO-06); until then home has only its WebApplication and FAQPage blocks.
-if (homeUsesSiteGraph) {
+// Google reads the site name from a WebSite node on the home page (SEO-06).
+{
   const where = HOME_FILE;
   const home = readByPage.get(where);
   const websites = home.nodes.filter((n) => typesOf(n).includes('WebSite'));
@@ -355,6 +390,99 @@ for (const file of ['404.html', '404/index.html', '_not-found/index.html']) {
     fail(path, `must be noindex, ${robots.length ? `robots is "${robots.join(' | ')}"` : 'has no robots meta'}`);
   }
   if (canonicals(h).length > 0) fail(path, `must not have a canonical, has ${canonicals(h).map((l) => l.href).join(', ')}`);
+  // GitHub Pages serves 404.html at any missing URL, so its links are root-relative; check them from the root.
+  if (file === '404.html') linkSources.push({ where: path, url: `${SITE}/`, markup: withoutScripts(readFileSync(path, 'utf8')) });
+}
+
+// ---- Links in page markup ----
+let linkCount = 0;
+for (const { where, url: pageUrl, markup } of linkSources) {
+  for (const href of new Set(tags(markup, 'a').map((a) => a.href).filter((href) => href !== undefined))) {
+    let target;
+    let pathname;
+    let id;
+    try {
+      target = new URL(href, pageUrl);
+      pathname = decodeURIComponent(target.pathname);
+      id = decodeURIComponent(target.hash.slice(1));
+    } catch {
+      fail(where, `link to ${href}: not a valid URL`);
+      continue;
+    }
+    // Other sites, upi:, mailto: and tel: links aren't checked.
+    if (target.origin !== SITE) continue;
+    linkCount++;
+    if (href.startsWith('#')) {
+      if (id && !hasId(markup, id)) fail(where, `link to ${href}: no id="${id}" on this page`);
+      continue;
+    }
+    if (pathname.endsWith('/')) {
+      const linked = `${SITE}${pathname}`;
+      if (!pageUrls.has(linked)) fail(where, `link to ${href}: not a page in ${OUT}/`);
+      else if (id && !hasId(markupByUrl.get(linked), id)) fail(where, `link to ${href}: no id="${id}" on that page`);
+      continue;
+    }
+    const file = join(OUT, pathname);
+    if (!existsSync(file) || !statSync(file).isFile()) {
+      const page = `${SITE}${pathname}/`;
+      fail(where, `link to ${href}: not a file in ${OUT}/${pageUrls.has(page) ? `; link the page as ${pathname}/` : ''}`);
+    }
+  }
+}
+
+// ---- RSS feed ----
+const feedFile = join(OUT, 'blog', 'feed.xml');
+if (existsSync(feedFile)) {
+  const items = [...readFileSync(feedFile, 'utf8').matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)];
+  const itemLinks = items.map(([, item]) => decode(item.match(/<link>\s*([^<]*?)\s*<\/link>/i)?.[1] ?? ''));
+  const postUrls = [...pageUrls].filter((url) => /^\/blog\/[^/]+\/$/.test(new URL(url).pathname));
+  for (const url of postUrls) if (!itemLinks.includes(url)) fail(feedFile, `no <item> for ${url}, a post in ${OUT}/`);
+  for (const url of itemLinks) {
+    if (!postUrls.includes(url)) fail(feedFile, `<item> links ${url || 'nothing'}, which isn't a post in ${OUT}/`);
+  }
+}
+
+// ---- robots.txt ----
+const robotsFile = join(OUT, 'robots.txt');
+if (!existsSync(robotsFile)) fail(robotsFile, 'missing: app/robots.ts writes it');
+else {
+  /** Runs of consecutive User-Agent lines, each with whether a rule after it disallows the whole site. */
+  const groups = [];
+  const sitemaps = [];
+  let group;
+  let readingAgents = false;
+  for (const raw of readFileSync(robotsFile, 'utf8').split(/\r?\n/)) {
+    const line = raw.replace(/#.*/, '').trim().match(/^([a-z-]+)\s*:\s*(.*)$/i);
+    if (!line) continue;
+    const name = line[1].toLowerCase();
+    const value = line[2].trim();
+    if (name === 'user-agent') {
+      if (!readingAgents) groups.push((group = { agents: [], disallowsAll: false }));
+      group.agents.push(value.toLowerCase());
+      readingAgents = true;
+      continue;
+    }
+    readingAgents = false;
+    if (name === 'sitemap') sitemaps.push(value);
+    else if (name === 'disallow' && group && (value === '/' || value === '/*')) group.disallowsAll = true;
+  }
+  for (const { agents, disallowsAll } of groups) {
+    const blocked = agents.filter((agent) => SEARCH_AGENTS.includes(agent));
+    if (disallowsAll && blocked.length > 0) {
+      fail(robotsFile, `"Disallow: /" for User-Agent: ${blocked.join(', ')} keeps the whole site out of search`);
+    }
+  }
+  if (!sitemaps.includes(`${SITE}/sitemap.xml`)) fail(robotsFile, `no "Sitemap: ${SITE}/sitemap.xml" line`);
+}
+
+// ---- CNAME ----
+// Both workflows run this check, so a pull request that drops public/CNAME fails too, not only the deploy from main.
+const cnameFile = join(OUT, 'CNAME');
+const domain = new URL(SITE).host;
+if (!existsSync(cnameFile)) fail(cnameFile, `missing: the build copies public/CNAME (${domain}) into ${OUT}/`);
+else {
+  const name = readFileSync(cnameFile, 'utf8').trim();
+  if (name !== domain) fail(cnameFile, `is "${name}", expected "${domain}"`);
 }
 
 // ---- Home page content in the rendered HTML ----
@@ -364,8 +492,8 @@ for (const file of ['404.html', '404/index.html', '_not-found/index.html']) {
   // The RSC payload in <script> repeats the page's text, so the content checks read the markup only.
   const markup = withoutScripts(html);
   const steps = (markup.match(/\sid="steps-title"/g) ?? []).length;
-  if (steps !== 1) fail(where, `expected exactly one id="steps-title" ("How it works"), found ${steps}`);
-  if (!markup.includes('Enter the bill')) fail(where, '"Enter the bill" (How it works, step 1) is not in the rendered HTML');
+  if (steps !== 1) fail(where, `expected exactly one id="steps-title" (the steps, "How to split a UPI payment"), found ${steps}`);
+  if (!markup.includes('Enter the bill')) fail(where, '"Enter the bill" (step 1 of the steps) is not in the rendered HTML');
   if (!/\sid="total"/.test(markup)) fail(where, 'the amount input (id="total") is not in the rendered HTML');
   if (html.includes('BAILOUT_TO_CLIENT_SIDE_RENDERING')) {
     fail(where, 'contains BAILOUT_TO_CLIENT_SIDE_RENDERING: part of the page only renders in the browser');
@@ -382,5 +510,5 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 const linkedFiles = new Set([...checkedFiles.keys()].map((k) => k.split('|')[0])).size;
 const jsonLdCount = [...jsonLdByPage.values()].reduce((n, docs) => n + docs.length, 0);
 console.log(
-  `check-export: ok — ${plural(pages.length, 'indexable page')} match the sitemap, ${plural(linkedFiles, 'linked file')} present, ${plural(jsonLdCount, 'JSON-LD block')} parse, 404 is noindex, home content is static.`,
+  `check-export: ok — ${plural(pages.length, 'indexable page')} match the sitemap, ${plural(linkCount, 'link')} resolve, ${plural(linkedFiles, 'linked file')} present, ${plural(jsonLdCount, 'JSON-LD block')} parse, robots.txt and the feed are in place, 404 is noindex, home content is static.`,
 );

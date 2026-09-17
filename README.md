@@ -84,8 +84,10 @@ happens in the payer's own UPI app.
 - TukdaPay doesn't say what the current UPI rules are. Wondering whether
   you'll be charged, or whether a shop can pass its fee on to you?
   [NPCI's FAQs on the merchant discount rate](https://www.npci.org.in/uploads/FA_Qs_Merchant_Discount_Rate_MDR_on_Select_UPI_P2_M_Transactions_58dba1d39e.pdf)
-  (PDF) cover both (questions 15 and 34). Check rumours on
-  [PIB Fact Check](https://factcheck.pib.gov.in/).
+  (PDF) cover both (questions 15 and 34). For a newer claim, see whether
+  PIB Fact Check has covered it on its
+  [Telegram channel](https://t.me/PIB_FactCheck) or
+  [X account](https://x.com/PIBFactCheck).
 - Paying in parts can't help if what stops a payment is a total for the day
   rather than a cap on one payment.
   [Here's what to check](https://tukdapay.com/blog/cant-pay-more-than-2000-upi/).
@@ -131,7 +133,8 @@ app/
 components/
   splitter/                Splitter (form and amount), PlanResult (parts and pay bar), QrCode
   TukdaStrip.tsx           the tukda strip: a bill drawn as a bar cut into its parts
-  SiteHeader.tsx, SiteFooter.tsx, JsonLd.tsx
+  SiteHeader.tsx, SiteHeaderNav.tsx, SiteFooter.tsx, JsonLd.tsx
+  RouteFocus.tsx           moves focus into <main> after a page change from the header or footer
   blog/                    post page (PostShell) with its metadata and JSON-LD, PostList, PostParts
 content/
   posts.ts                 blog post list: slug, title, description, dates
@@ -152,13 +155,16 @@ lib/                       pure logic, no React
   metadata.ts              pageMetadata() for every page except home
   schema.ts                JSON-LD builders
   og.ts                    share card list and title fitting
+  nav.ts                   which header link is the section you're in (aria-current)
+  routeFocus.ts            whether a page change left focus outside <main>
   site.ts                  site-wide constants such as the URL, name, repo link and default max per payment
 scripts/
   check-export.mjs         npm run check:export
 assets/fonts/              Bricolage Grotesque TTFs for the share cards (OFL.txt)
-test/                      node:test tests: <module>.test.ts for most lib/ modules; the rest check content, posts and pages
+test/                      node:test tests: <module>.test.ts for most lib/ modules; the rest check content, posts, pages
+                           and scripts/check-export.mjs (against a small hand-made export)
 public/                    CNAME, favicon.svg, og.png, icons/
-docs/superpowers/specs/    design specs
+docs/superpowers/specs/    early design specs (historical)
 .github/workflows/         test.yml, deploy.yml (see Deployment)
 next.config.ts             static export, trailing slashes, MDX
 mdx-components.tsx         components every post can use
@@ -213,7 +219,7 @@ checks title and description lengths, that titles and descriptions write
 that links to other posts and to `/use-cases/#…` sections exist, and that the
 post doesn't repeat a few known NPCI figures. After `npm run build`,
 `npm run check:export` checks the built page: title, description, canonical
-URL, sitemap entry, share image and JSON-LD.
+URL, sitemap and feed entries, share image, JSON-LD and links.
 
 ## Adding a use case
 
@@ -238,6 +244,8 @@ has its own (see [SEO](#seo)).
 - Add the URL to `app/sitemap.ts`, dated by the last change to the page's
   words. `npm run check:export` fails if an exported page isn't in the
   sitemap.
+- Render its JSON-LD with `<JsonLd>`, built with `lib/schema.ts`.
+  `npm run check:export` fails on an indexable page without any.
 - For its own share card, add an entry to `PAGE_CARDS` in `lib/og.ts` and
   pass `image: ogImage(ogCards(posts).find((c) => c.key === '<key>')!)` to
   `pageMetadata()`. Otherwise it shares `public/og.png`.
@@ -264,9 +272,14 @@ has its own (see [SEO](#seo)).
   or limit.
 - **Export check.** After a build, `npm run check:export` checks each exported
   page's title, description, `og:title`, canonical URL, sitemap entry, robots
-  meta, H1, share image and JSON-LD, that the 404 page is noindex, and that
-  the home page's form and steps are in the static HTML. CI doesn't deploy if
-  it fails. The full list is at the top of `scripts/check-export.mjs`.
+  meta, H1, share image, JSON-LD (every page has it, with the types above) and
+  links to other pages, files and `#` sections. It also checks that the 404
+  page is noindex, that the feed lists every post, that `robots.txt` doesn't
+  block the site and points to the sitemap, that `CNAME` names tukdapay.com,
+  and that the home page's form and steps are in the static HTML. CI doesn't
+  deploy if it fails. The full list is at the top of
+  `scripts/check-export.mjs`, and `test/check-export.test.ts` runs it against
+  a small hand-made export.
 - **After deploying.** Submit `https://tukdapay.com/sitemap.xml` in Google
   Search Console and Bing Webmaster Tools. For a new or rewritten page, request
   indexing with URL Inspection.
@@ -274,10 +287,9 @@ has its own (see [SEO](#seo)).
 ## Deployment
 
 - `.github/workflows/deploy.yml` runs on every push to `main` (or manually
-  from the Actions tab): `npm ci`, tests, typecheck, lint, build, then checks
-  the export (`out/index.html` and `out/CNAME` exist, and
-  `npm run check:export` passes). Only then does it publish `out/` to GitHub
-  Pages with `actions/deploy-pages`.
+  from the Actions tab): `npm ci`, tests, typecheck, lint, build, then
+  `npm run check:export`. Only then does it publish `out/` to GitHub Pages
+  with `actions/deploy-pages`.
 - `.github/workflows/test.yml` runs the same install, tests, typecheck, lint,
   build and `npm run check:export`, without deploying, on pull requests and
   pushes to `main`.

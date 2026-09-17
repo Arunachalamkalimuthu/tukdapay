@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { REPO_URL } from '@/lib/site';
+import { SiteHeaderNav } from './SiteHeaderNav';
 import styles from './SiteHeader.module.css';
 
 export function SiteHeader() {
@@ -14,11 +14,7 @@ export function SiteHeader() {
         </svg>
         TukdaPay
       </Link>
-      <nav className={styles.nav} aria-label="Site">
-        <Link href="/use-cases/">Use cases</Link>
-        <Link href="/blog/">Blog</Link>
-        <a href={REPO_URL}>GitHub</a>
-      </nav>
+      <SiteHeaderNav className={styles.nav} />
     </header>
   );
 }

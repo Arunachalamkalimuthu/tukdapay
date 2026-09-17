@@ -54,7 +54,10 @@ repo's docs.
   Point to where it is published instead:
   [NPCI's FAQs on the merchant discount rate](https://www.npci.org.in/uploads/FA_Qs_Merchant_Discount_Rate_MDR_on_Select_UPI_P2_M_Transactions_58dba1d39e.pdf)
   by question number (for example, question 15 on whether consumers are
-  charged), or [PIB Fact Check](https://factcheck.pib.gov.in/) for rumours.
+  charged), or, for rumours, PIB Fact Check's
+  [Telegram channel](https://t.me/PIB_FactCheck) or
+  [X account](https://x.com/PIBFactCheck) (its portal is for sending in a
+  claim, not reading checks).
   `npm test` catches a few figures from NPCI's FAQs in posts
   (`test/content.test.ts`), but not every way of stating a rule, so a
   reviewer still checks.

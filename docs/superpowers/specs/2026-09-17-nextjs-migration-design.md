@@ -1,3 +1,7 @@
+> Historical: the design for the move to Next.js, before the redesign.
+> README.md and CONTRIBUTING.md describe the current app and its copy
+> rules.
+
 # TukdaPay — Next.js migration and UX pass
 
 Date: 2026-09-17

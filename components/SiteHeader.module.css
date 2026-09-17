@@ -38,6 +38,8 @@
   white-space: nowrap;
 }
 .nav a:hover { color: var(--ink); text-decoration: underline; }
+/* The section you're in (aria-current from SiteHeaderNav). */
+.nav a[aria-current] { color: var(--ink); }
 
 @media (forced-colors: active) {
   .mark { fill: CanvasText; }
