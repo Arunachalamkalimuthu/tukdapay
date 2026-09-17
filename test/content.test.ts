@@ -124,8 +124,35 @@ test('every post body links the splitter or the use cases', () => {
 test('links between posts point at posts that exist', () => {
   const slugs = new Set(posts.map((p) => p.slug));
   for (const p of posts) {
-    for (const [, slug] of postSource(p.slug).matchAll(/\/blog\/([a-z0-9-]+)\//g)) {
+    // Only site-relative links (Markdown or JSX), so an external https://…/blog/…/ URL isn't mistaken for one.
+    for (const [, slug] of postSource(p.slug).matchAll(/(?:\]\(|href=")\/blog\/([a-z0-9-]+)\//g)) {
       assert.ok(slugs.has(slug), `${p.slug} links /blog/${slug}/, which has no entry in content/posts.ts`);
     }
   }
+});
+
+test('links to a section of /use-cases/ point at an id on that page', () => {
+  const page = readFileSync(new URL('../app/use-cases/page.tsx', import.meta.url), 'utf8');
+  for (const p of posts) {
+    for (const [, id] of postSource(p.slug).matchAll(/\/use-cases\/#([\w-]+)/g)) {
+      assert.ok(page.includes(`id="${id}"`), `${p.slug} links /use-cases/#${id}, which app/use-cases/page.tsx has no id for`);
+    }
+  }
+});
+
+test('the how-to post’s worked examples are use cases that exist', () => {
+  // app/blog/split-upi-payment-above-2000/page.mdx names a ₹4,200 kirana bill and ₹5,500 tuition fees
+  // and sends readers to /use-cases/ for them.
+  for (const amount of [4200, 5500]) {
+    assert.ok(useCases.some((u) => u.amount === amount), `no use case for ₹${amount}`);
+  }
+});
+
+test('the home page’s three latest posts include the ₹2000 check post', () => {
+  // Home lists posts.slice(0, 3), and until the FAQ links it (SEO-05) that list is home's only link to
+  // the check post. Keep it in the first three, or add another link from home before moving it down.
+  assert.ok(
+    posts.slice(0, 3).some((p) => p.slug === 'upi-2000-threshold-what-to-check'),
+    'upi-2000-threshold-what-to-check is not among the first three posts',
+  );
 });

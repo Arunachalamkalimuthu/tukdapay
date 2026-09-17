@@ -16,10 +16,10 @@ export const posts: PostMeta[] = [
     date: '2026-09-17',
   },
   {
-    slug: 'rupay-credit-card-upi-2000-limit',
-    title: 'RuPay credit card on UPI: ₹2000 limit reached?',
+    slug: 'upi-2000-threshold-what-to-check',
+    title: 'UPI charges above ₹2000: how to check what applies',
     description:
-      'RuPay credit card payment on UPI stopped at ₹2000? Check whether the limit is per payment or per day, where issuers publish it, and when paying in parts helps.',
+      'Fee on the shop, a charge on you, or a cap on a benefit? What "₹2000" means in UPI news, and where NPCI, RBI and PIB publish what applies today.',
     date: '2026-09-17',
   },
   {
@@ -30,10 +30,10 @@ export const posts: PostMeta[] = [
     date: '2026-09-17',
   },
   {
-    slug: 'upi-2000-threshold-what-to-check',
-    title: 'UPI charges above ₹2000: how to check what applies',
+    slug: 'rupay-credit-card-upi-2000-limit',
+    title: 'RuPay credit card on UPI: ₹2000 limit reached?',
     description:
-      'Fee on the shop, a charge on you, or a cap on a benefit? What "₹2000" means in UPI news, and where NPCI, RBI and PIB publish what applies today.',
+      "RuPay credit card UPI payment stopped at ₹2000? Check if the limit is per payment or per day, where issuers publish it, and when paying in parts can't help.",
     date: '2026-09-17',
   },
   {
