@@ -1,18 +1,28 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { JsonLd } from '@/components/JsonLd';
 import { pageMetadata } from '@/lib/metadata';
 import { REPO_URL, SITE_NAME, SITE_URL } from '@/lib/site';
 import s from './page.module.css';
 
-const TITLE = 'About this free, open-source UPI payment splitter';
+// The brand is in the title itself (search results and share cards), so the layout's " – TukdaPay" suffix is skipped.
+const TITLE = 'About TukdaPay, a free, open-source UPI payment splitter';
 const DESCRIPTION =
-  'Who builds TukdaPay and why, how it’s funded (it isn’t: no ads, no tracking), why your amounts and UPI IDs stay in your browser, and how to get in touch.';
+  'Who builds TukdaPay and why, how it’s funded (it isn’t: no ads, no tracking), what it saves in your browser, and how to get in touch.';
 const PATH = '/about/';
 const AUTHOR_URL = 'https://github.com/Arunachalamkalimuthu';
+/** NPCI, Merchant Discount Rate (MDR) on Select UPI (P2M) Transactions – FAQs, 15 Sept 2026. */
+const NPCI_MDR_FAQ_URL =
+  'https://www.npci.org.in/uploads/FA_Qs_Merchant_Discount_Rate_MDR_on_Select_UPI_P2_M_Transactions_58dba1d39e.pdf';
+const GITHUB_PAGES_DATA_URL =
+  'https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages#data-collection';
 
-export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH });
+export const metadata: Metadata = {
+  ...pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH }),
+  title: { absolute: TITLE },
+};
 
-// Same Organization node (and @id) the home page's site-name markup uses, so the two describe one publisher.
+// Matches the ORGANIZATION node SEO-06 adds in lib/schema.ts (same @id); switch to that import when it lands.
 const structuredData = {
   '@context': 'https://schema.org',
   '@type': 'AboutPage',
@@ -55,8 +65,9 @@ export default function AboutPage() {
           out the parts, numbers each one so the shop can match them, and keeps track of the ones you tick as paid.
         </p>
         <p>
-          It isn’t a way around any fee or rule. Ask the shop before you split, and{' '}
-          <Link href="/blog/upi-2000-threshold-what-to-check/">check what applies to your payment</Link>.
+          It isn’t a way to avoid a fee. Ask the shop before you split. Wondering whether you’ll be charged, or whether a
+          shop can pass its fee on to you? <a href={NPCI_MDR_FAQ_URL}>NPCI’s FAQs on the merchant discount rate</a> (PDF)
+          answer both (questions 15 and 34).
         </p>
 
         <h2 className="t-heading">How it’s funded</h2>
@@ -64,14 +75,22 @@ export default function AboutPage() {
 
         <h2 className="t-heading">Your privacy</h2>
         <p>
-          Your last split (amount, UPI ID, name, note and paid ticks) and the last five UPI IDs you used are saved in
-          your browser’s local storage, so a reload keeps your place. Nothing you type is sent to TukdaPay or anyone
-          else, unless you share a breakdown on WhatsApp yourself. The page only builds <code>upi://pay</code> links,
-          and your UPI app does the rest. Clearing this site’s data in your browser removes it all.
+          Your browser’s local storage keeps your last split (amount, UPI ID, name, note, max per payment and which parts
+          you ticked as paid), so a reload keeps your place. It also keeps the last five shops you split for (UPI ID and
+          name), so you can pick one again. Clearing this site’s data in your browser removes it all.
+        </p>
+        <p>
+          Nothing you type is sent to TukdaPay. What you type leaves this page only when you choose: tapping Pay (or
+          scanning a part’s QR code) hands the UPI ID, name, amount and note to your UPI app, and the note goes with
+          the payment. Send on WhatsApp passes the breakdown to WhatsApp.
+        </p>
+        <p>
+          The site is hosted on GitHub Pages, and <a href={GITHUB_PAGES_DATA_URL}>GitHub logs visitors’ IP addresses</a>{' '}
+          for security.
         </p>
 
-        <h2 className="t-heading">Not linked to NPCI, banks or UPI apps</h2>
-        <p>TukdaPay isn’t affiliated with or endorsed by NPCI, UPI, any bank or any UPI app.</p>
+        <h2 className="t-heading">Not part of NPCI, a bank or a UPI app</h2>
+        <p>TukdaPay isn’t affiliated with or endorsed by NPCI or its UPI brand, any bank or any UPI app.</p>
 
         <h2 className="t-heading">Open source</h2>
         <p>
