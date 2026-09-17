@@ -86,7 +86,7 @@ export const faq: FaqEntry[] = [
   },
   {
     q: 'Which UPI apps work?',
-    a: 'Any app that handles UPI links: Google Pay, PhonePe, Paytm, BHIM, Amazon Pay, CRED and bank apps. On a computer, scan the QR code with your phone.',
+    a: 'Any app that handles UPI links: Google Pay, PhonePe, Paytm, BHIM, Amazon Pay, CRED and bank apps. On a computer, scan the QR code with your phone. Some apps won’t accept a payment opened from a link, for example to a personal UPI ID. If yours declines it, scan the shop’s QR in your UPI app and type that part’s amount.',
   },
   {
     q: 'Is it free and open source?',

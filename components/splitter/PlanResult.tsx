@@ -232,7 +232,8 @@ export function PlanResult({ plan, sectionRef, headingRef, onTogglePaid, onStart
       </p>
 
       <p className={s.fine}>
-        Each Pay button opens your UPI app with the amount and note filled in. This page can’t see whether a
+        Each Pay button opens your UPI app with the amount and note filled in. If your app won’t pay from a link,
+        scan the shop’s QR in your UPI app instead and type the amount yourself. This page can’t see whether a
         payment went through, so tick each one off yourself. On a computer, scan the QR with your phone instead.
       </p>
     </section>

@@ -1,8 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readPrefill, stripPrefill, PREFILL_KEYS, MAX_TEXT } from '../lib/prefill.ts';
+import { readPrefill, stripPrefill, prefillInput, PREFILL_KEYS, MAX_TEXT } from '../lib/prefill.ts';
+import { DEFAULT_MAX } from '../lib/site.ts';
 
 const p = (query: string) => readPrefill(new URLSearchParams(query));
+const enc = encodeURIComponent;
 
 test('no params means no prefill', () => {
   assert.deepEqual(p(''), { present: false });
@@ -26,6 +28,15 @@ test('amounts written with Rs. in front keep their digits', () => {
   assert.equal(p('max=Rs.1000').max, 1000);
 });
 
+test('an amount with more than one number in it is ignored, not run together into a different amount', () => {
+  assert.deepEqual(p('amount=5000x2'), { present: false });
+  assert.deepEqual(p('amount=2.5e4'), { present: false });
+  assert.deepEqual(p('amount=1e5'), { present: false });
+  assert.deepEqual(p(`amount=${enc('4,999 for 2 items')}`), { present: false });
+  assert.deepEqual(p(`max=${enc('1000 x 2')}`), { present: false });
+  assert.equal(p(`amount=${enc('₹ 1,00,000.50 ')}`).amount, 100000.5);
+});
+
 test('amounts over the most the page splits are ignored', () => {
   assert.deepEqual(p('amount=1000000000000000000000'), { present: false });
   assert.deepEqual(p(`max=1${'0'.repeat(307)}`), { present: false });
@@ -47,13 +58,25 @@ test('text params are trimmed and ignored when empty', () => {
   assert.deepEqual(p('pa=%20%20&pn=&note='), { present: false });
 });
 
-test('text params are capped at 100 characters without splitting an emoji', () => {
+test('text params are capped at 100 UTF-16 units, as the form’s fields count them, without splitting an emoji or an accent', () => {
   assert.equal(MAX_TEXT, 100);
   const family = '\u{1F468}‍\u{1F469}‍\u{1F467}';
-  assert.equal(p(`note=${encodeURIComponent('x'.repeat(98) + family + 'y')}`).note, 'x'.repeat(98) + family + 'y');
-  assert.equal(p(`note=${encodeURIComponent('x'.repeat(99) + family + 'y')}`).note, 'x'.repeat(99) + family);
-  assert.equal(p(`pn=${encodeURIComponent('x'.repeat(100) + family)}`).pn, 'x'.repeat(100));
-  assert.equal(p(`note=${encodeURIComponent('x'.repeat(99) + 'é' + 'y')}`).note, 'x'.repeat(99) + 'é');
+  assert.equal(family.length, 8);
+  assert.equal(p(`note=${enc('x'.repeat(92) + family + 'y')}`).note, 'x'.repeat(92) + family);
+  assert.equal(p(`note=${enc('x'.repeat(98) + family + 'y')}`).note, 'x'.repeat(98));
+  assert.equal(p(`note=${enc('x'.repeat(99) + family + 'y')}`).note, 'x'.repeat(99));
+  assert.equal(p(`pn=${enc('x'.repeat(100) + family)}`).pn, 'x'.repeat(100));
+  assert.equal(p(`note=${enc('x'.repeat(98) + 'e\u0301' + 'y')}`).note, 'x'.repeat(98) + 'e\u0301');
+  assert.equal(p(`note=${enc('x'.repeat(99) + 'e\u0301' + 'y')}`).note, 'x'.repeat(99));
+});
+
+test('a name or note of many long emoji stays within what the form’s fields take', () => {
+  // A four-person family is 11 UTF-16 units: counted as characters, 100 of them would be 1,100 units.
+  const family = '\u{1F468}‍\u{1F469}‍\u{1F467}‍\u{1F466}';
+  const { pn, note } = p(`pn=${enc(family.repeat(120))}&note=${enc(family.repeat(120))}`);
+  assert.equal(note, family.repeat(9));
+  assert.equal(pn, family.repeat(9));
+  assert.ok(note!.length <= MAX_TEXT);
 });
 
 test('text params are capped at 100 characters', () => {
@@ -68,6 +91,26 @@ test('an invalid UPI ID is still prefilled so the form can point it out', () => 
 test('accepts anything with a get(key) method', () => {
   const source = { get: (key: string) => (key === 'amount' ? '500' : null) };
   assert.deepEqual(readPrefill(source), { present: true, amount: 500 });
+});
+
+test('prefillInput is the payment a link describes, once it has both the amount and the UPI ID', () => {
+  assert.deepEqual(prefillInput(p('amount=14999&pa=shop@okaxis')), {
+    total: 14999,
+    pa: 'shop@okaxis',
+    pn: '',
+    note: '',
+    maxPerTxn: DEFAULT_MAX,
+  });
+  assert.deepEqual(prefillInput(p('amount=5000&pa=shop@okaxis&pn=Tea%20Shop&note=Bill%2042&max=1000')), {
+    total: 5000,
+    pa: 'shop@okaxis',
+    pn: 'Tea Shop',
+    note: 'Bill 42',
+    maxPerTxn: 1000,
+  });
+  assert.equal(prefillInput(p('amount=5000&pn=Tea%20Shop')), null);
+  assert.equal(prefillInput(p('pa=shop@okaxis')), null);
+  assert.equal(prefillInput(p('')), null);
 });
 
 test('PREFILL_KEYS lists every supported param', () => {

@@ -81,7 +81,7 @@
 .recent { container-type: inline-size; display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
 .recentChip {
   font: inherit; font-size: var(--text-small); line-height: 1.2; text-align: left;
-  display: inline-flex; align-items: center; gap: 10px;
+  display: inline-flex; align-items: center;
   max-width: 100%; min-width: 0; min-height: 44px; padding: 0 14px;
   color: var(--ink); background: var(--surface); border: 1.5px solid var(--field); border-radius: var(--radius);
   cursor: pointer;
@@ -89,13 +89,31 @@
 .recentChip:hover { border-color: var(--ink); }
 .chipName, .chipHead, .chipTail { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /*
- * The UPI ID tells merchants apart, so it gets the room: a long name stops at 40% of the row
- * (cqi, not %, which would cut short names in a chip sized to its content).
+ * When the chip is too narrow, the UPI ID gives way first, as its end tells merchants apart: the start of the
+ * ID (the head) shrinks to an ellipsis before the name loses a letter, and the end of the ID and the handle
+ * (the tail) never shrink. The name, the head and the tail are all items of the chip's row (the ID's wrapper
+ * is display: contents), and the head's huge flex-shrink gives it all of the shrinking until it is down to its
+ * minimum; only then does the name shrink. A long name stops at 40% of the row (cqi, not %, which would cut
+ * short names in a chip sized to its content).
  */
-.chipName { flex: 0 1 auto; max-width: 40cqi; font-weight: 600; }
-.chipId { flex: 0 1 auto; display: flex; min-width: 0; color: var(--muted); }
-/* A long ID loses its middle: the head takes the ellipsis, the end of the ID and the handle stay. */
-.chipHead { flex: 0 1 auto; }
+.chipName { flex: 0 1 auto; max-width: 40cqi; margin-inline-end: 10px; font-weight: 600; }
+.chipId { display: contents; color: var(--muted); }
+/*
+ * The head is set right to left, so it is cut from its start and its visible end runs straight into the tail
+ * with no ellipsis gap inside the ID; the <bdi> keeps its characters in order, and text-align: start keeps a
+ * head narrower than its box against the tail too. It keeps 1.6em: Chrome always shows the head's last
+ * character, and that plus the ellipsis needs about 1.3em in Bricolage and 1.55em in the Arial fallback. Any
+ * narrower and the ellipsis is clipped to a sliver, so the ID looks whole. A head that is narrower than that
+ * to begin with keeps its own width where calc-size() is supported, and elsewhere (RecentChip keeps a head of
+ * one or two characters with the tail) sits against the tail with a little room before it.
+ */
+.chipHead {
+  flex: 0 1000000 auto;
+  min-width: 1.6em;
+  min-width: calc-size(max-content, min(size, 1.6em));
+  direction: rtl; text-align: start;
+}
+.chipHead > bdi { direction: ltr; unicode-bidi: isolate; }
 .chipTail { flex: 0 0 auto; max-width: 100%; }
 
 /* ===== Max per payment ===== */
@@ -167,6 +185,8 @@
 
 /* Every row has the same grid and padding, so the amounts line up whatever the state. */
 .part {
+  /* The bar's Scan link lands a row here, clear of the top edge. */
+  scroll-margin-top: 16px;
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr);
   grid-template-areas: 'tick body';
@@ -260,10 +280,17 @@
 /* ===== The action bar ===== */
 .bar {
   position: sticky; bottom: 0; z-index: 2;
-  margin: 16px calc(-1 * var(--gutter)) 0;
-  padding: 12px var(--gutter) calc(12px + env(safe-area-inset-bottom, 0px));
+  margin: 16px 0 0;
+  padding: 12px 0 calc(12px + env(safe-area-inset-bottom, 0px));
   background: var(--paper);
   border-top: 1px solid var(--line);
+}
+/*
+ * While the page fills the screen (home is 440px plus 16px gutters until 700px), the bar runs edge to edge.
+ * On a wider screen the page is centred and the bar keeps to the column, sharing its left edge.
+ */
+@media (max-width: 472px) {
+  .bar { margin-inline: calc(-1 * var(--gutter)); padding-inline: var(--gutter); }
 }
 .status {
   display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: 12px;
@@ -332,7 +359,6 @@
 @media (min-width: 960px) {
   /* The result starts beside the hero, so revealing it keeps the page at the top with the header in view. */
   .result { margin-top: 0; scroll-margin-top: 120px; }
-  .bar { margin-inline: 0; padding-inline: 0; }
   .actionsBreak { display: none; }
   .share { flex: 0 0 auto; padding-inline: 20px; }
   .startOver { margin-left: 8px; }
@@ -346,4 +372,6 @@
   .part.isNext { outline: 2px solid CanvasText; outline-offset: -2px; }
   .instrument:focus-within { outline-color: Highlight; }
   .qrPaid { border: 1px solid CanvasText; }
+  /* Forced colours would redraw a QR light on dark in a dark theme, which many scanners can't read. */
+  .qr { forced-color-adjust: none; }
 }
