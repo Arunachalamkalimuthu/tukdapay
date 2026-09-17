@@ -21,6 +21,9 @@ export function SiteFooter() {
             <Link href="/blog/">Blog</Link>
           </li>
           <li>
+            <Link href="/about/">About</Link>
+          </li>
+          <li>
             <a href="/blog/feed.xml">RSS</a>
           </li>
         </ul>
