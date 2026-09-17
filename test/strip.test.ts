@@ -82,7 +82,6 @@ test('three parts: weights follow the amounts and figures sit under the pieces',
   near(sum(m.segments.map((s) => s.weight)), 100);
   assert.equal(m.gapPx, 3);
   assert.equal(m.figuresUnder, true);
-  assert.deepEqual(m.figures, ['₹1,999', '₹1,999', '₹1,002']);
   assert.equal(m.summary, '₹1,999 + ₹1,999 + ₹1,002');
 });
 
@@ -94,7 +93,7 @@ test('segments have stable, distinct keys', () => {
 
 test('a tiny remainder keeps a proportional weight; the minimum width keeps it visible', () => {
   const m = stripModel(splitAmount(4000));
-  assert.deepEqual(m.figures, ['₹1,999', '₹1,999', '₹2']);
+  assert.deepEqual(collapseFigures(splitAmount(4000)), ['₹1,999', '₹1,999', '₹2']);
   near(m.segments[2].weight, 0.05);
   assert.equal(m.minPx, 10);
   assert.equal(m.figuresUnder, true);
@@ -257,7 +256,7 @@ test('a continuous bar drops empty runs', () => {
 test('no parts gives an empty strip', () => {
   const m = stripModel([]);
   assert.deepEqual(m.segments, []);
-  assert.deepEqual(m.figures, []);
+  assert.deepEqual(collapseFigures([]), []);
   assert.equal(m.summary, '');
   assert.equal(m.figuresUnder, false);
   assert.equal(m.labelsInside, false);

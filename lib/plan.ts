@@ -71,6 +71,29 @@ export function shouldKeepPlan(plan: Plan | null, input: PlanInput): plan is Pla
   return !!plan && plan.parts.some((p) => p.paid) && sameInput(plan.input, input);
 }
 
+/**
+ * A saved plan worth coming back to for `input`: the same payment, with a part still to pay. Null for
+ * a plan that is fully paid (the same link reused for next month's bill starts afresh), another
+ * payment, or no plan.
+ */
+export function resumablePlan(saved: Plan | null, input: PlanInput): Plan | null {
+  return saved && saved.parts.some((p) => !p.paid) && sameInput(saved.input, input) ? saved : null;
+}
+
+/**
+ * `stored` in place of `plan` when both are the same payment. Another tab (or the installed app)
+ * may have ticked parts since this one read the plan, and storage has the latest ticks.
+ */
+export function latestPlan(plan: Plan, stored: Plan | null): Plan {
+  return stored && stored.parts.length === plan.parts.length && sameInput(stored.input, plan.input) ? stored : plan;
+}
+
+/** The plan with part `index` ticked or unticked, keeping any ticks `stored` has for the same payment (see latestPlan). */
+export function withPaid(plan: Plan, index: number, paid: boolean, stored: Plan | null = null): Plan {
+  const base = latestPlan(plan, stored);
+  return { ...base, parts: base.parts.map((p) => (p.index === index ? { ...p, paid } : p)) };
+}
+
 export function breakdownText(plan: Plan): string {
   const { total, pa, pn } = plan.input;
   const n = plan.parts.length;

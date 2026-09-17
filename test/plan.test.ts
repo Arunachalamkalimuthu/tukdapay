@@ -1,6 +1,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createPlan, breakdownText, parsePlan, countParts, sameInput, shouldKeepPlan, MAX_PARTS, type Plan } from '../lib/plan.ts';
+import {
+  createPlan,
+  breakdownText,
+  parsePlan,
+  countParts,
+  latestPlan,
+  resumablePlan,
+  sameInput,
+  shouldKeepPlan,
+  withPaid,
+  MAX_PARTS,
+  type Plan,
+} from '../lib/plan.ts';
 import { MAX_AMOUNT } from '../lib/format.ts';
 import { splitAmount } from '../lib/split.ts';
 
@@ -194,4 +206,54 @@ test('shouldKeepPlan makes a new plan when nothing is paid, the inputs differ or
   assert.equal(shouldKeepPlan(plan, { ...input, total: 6000 }), false);
   assert.equal(shouldKeepPlan(plan, { ...input, note: 'Table 5' }), false);
   assert.equal(shouldKeepPlan(null, input), false);
+});
+
+test('resumablePlan brings back a saved plan for the same payment while a part is still to pay', () => {
+  const saved = createPlan(input);
+  saved.parts[0].paid = true;
+  assert.equal(resumablePlan(saved, { ...input }), saved);
+  const untouched = createPlan(input);
+  assert.equal(resumablePlan(untouched, { ...input }), untouched);
+});
+
+test('resumablePlan leaves behind a plan that is fully paid, another payment, or nothing', () => {
+  const paid = createPlan(input);
+  paid.parts.forEach((p) => (p.paid = true));
+  assert.equal(resumablePlan(paid, { ...input }), null);
+  const started = createPlan(input);
+  started.parts[0].paid = true;
+  assert.equal(resumablePlan(started, { ...input, total: 6000 }), null);
+  assert.equal(resumablePlan(started, { ...input, pa: 'other@upi' }), null);
+  assert.equal(resumablePlan(started, { ...input, note: '' }), null);
+  assert.equal(resumablePlan(null, input), null);
+});
+
+test('latestPlan takes the stored plan only when it is the same payment', () => {
+  const plan = createPlan(input);
+  const stored = createPlan(input);
+  stored.parts[0].paid = true;
+  assert.equal(latestPlan(plan, stored), stored);
+  assert.equal(latestPlan(plan, null), plan);
+  const other = createPlan({ ...input, total: 6000 });
+  assert.equal(latestPlan(plan, other), plan);
+});
+
+test('withPaid ticks or unticks one part and leaves the plan it was given alone', () => {
+  const plan = createPlan(input);
+  const ticked = withPaid(plan, 1, true);
+  assert.deepEqual(ticked.parts.map((p) => p.paid), [false, true, false]);
+  assert.deepEqual(plan.parts.map((p) => p.paid), [false, false, false]);
+  assert.deepEqual(withPaid(ticked, 1, false).parts.map((p) => p.paid), [false, false, false]);
+});
+
+test('withPaid keeps the ticks another tab saved for the same payment', () => {
+  // This tab read the plan before the other tab ticked part 1.
+  const plan = createPlan(input);
+  const stored = createPlan(input);
+  stored.parts[0].paid = true;
+  assert.deepEqual(withPaid(plan, 1, true, stored).parts.map((p) => p.paid), [true, true, false]);
+  // A stored plan for another payment (say, Start over and a new split in the other tab) is not mixed in.
+  const other = createPlan({ ...input, pa: 'other@upi' });
+  other.parts[2].paid = true;
+  assert.deepEqual(withPaid(plan, 1, true, other).parts.map((p) => p.paid), [false, true, false]);
 });

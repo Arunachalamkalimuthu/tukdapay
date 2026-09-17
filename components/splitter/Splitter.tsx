@@ -4,7 +4,18 @@ import { flushSync } from 'react-dom';
 import { useSearchParams } from 'next/navigation';
 import { splitAmount } from '@/lib/split';
 import { isValidVpa } from '@/lib/upi';
-import { countParts, createPlan, MAX_PARTS, parsePlan, sameInput, shouldKeepPlan, type Plan } from '@/lib/plan';
+import {
+  countParts,
+  createPlan,
+  latestPlan,
+  MAX_PARTS,
+  parsePlan,
+  resumablePlan,
+  sameInput,
+  shouldKeepPlan,
+  withPaid,
+  type Plan,
+} from '@/lib/plan';
 import {
   amountToInput,
   editAmountInput,
@@ -15,7 +26,7 @@ import {
   MAX_AMOUNT_TEXT,
   parseAmount,
 } from '@/lib/format';
-import { MAX_TEXT, readPrefill, stripPrefill, type ParamSource } from '@/lib/prefill';
+import { MAX_TEXT, prefillInput, readPrefill, stripPrefill, type ParamSource } from '@/lib/prefill';
 import { parseRecent, rememberMerchant, type RecentMerchant } from '@/lib/recent';
 import { readJson, writeJson } from '@/lib/storage';
 import { DEFAULT_MAX } from '@/lib/site';
@@ -45,13 +56,18 @@ interface Initial {
 const EMPTY: Initial = { total: '', pa: '', pn: '', note: '', max: amountToInput(DEFAULT_MAX), touched: {}, plan: null, recent: [] };
 
 /**
- * Browser only. A URL prefill (?amount=&pa=&pn=&note=&max=) starts a fresh form and
- * leaves the saved plan in storage untouched; without one, the saved plan comes back.
+ * Browser only. Without a URL prefill (?amount=&pa=&pn=&note=&max=), the saved plan comes back. A
+ * prefill for the saved plan's payment, while it still has a part to pay, brings that plan back with
+ * its ticks too (the same link opened again from a chat, mid-way through paying). Any other prefill
+ * starts a fresh form and leaves the saved plan in storage untouched.
  */
 function loadInitial(params: ParamSource): Initial {
   const recent = parseRecent(readJson(RECENT_KEY));
   const prefill = readPrefill(params);
-  if (prefill.present) {
+  const saved = parsePlan(readJson(PLAN_KEY));
+  const linked = prefillInput(prefill);
+  const plan = prefill.present ? linked && resumablePlan(saved, linked) : saved;
+  if (prefill.present && !plan) {
     return {
       ...EMPTY,
       recent,
@@ -64,7 +80,6 @@ function loadInitial(params: ParamSource): Initial {
       touched: { total: prefill.amount !== undefined, pa: prefill.pa !== undefined, max: prefill.max !== undefined },
     };
   }
-  const plan = parsePlan(readJson(PLAN_KEY));
   if (!plan) return { ...EMPTY, recent };
   const { input } = plan;
   return {
@@ -141,14 +156,25 @@ function revealResult(section: HTMLElement | null, heading: HTMLHeadingElement |
 
 /**
  * Apply a change to an amount field without letting React's rewrite of the value throw the
- * caret to the end (say, when a second "." is ignored).
+ * caret to the end (say, when a second "." is ignored). The cleaned value and its caret go into
+ * the field straight away, so React finds nothing to rewrite, and a key that arrives before the next
+ * frame lands where it was typed. `carry` holds the keys the field has dropped (see editAmountInput).
  */
-function changeAmount(e: React.ChangeEvent<HTMLInputElement>, before: string, set: (value: string) => void) {
+function changeAmount(
+  e: React.ChangeEvent<HTMLInputElement>,
+  before: string,
+  set: (value: string) => void,
+  carry: { current: string },
+) {
   const el = e.target;
   const raw = el.value;
-  const { value, caret } = editAmountInput(before, raw, el.selectionStart ?? raw.length);
+  const { value, caret, carry: dropped } = editAmountInput(before, raw, el.selectionStart ?? raw.length, carry.current);
+  carry.current = dropped;
+  if (value !== raw) {
+    el.value = value;
+    el.setSelectionRange(caret, caret);
+  }
   set(value);
-  if (value !== raw) requestAnimationFrame(() => el.setSelectionRange(caret, caret));
 }
 
 function FieldError({ id, children }: { id: string; children: ReactNode }) {
@@ -170,7 +196,9 @@ function FieldError({ id, children }: { id: string; children: ReactNode }) {
  * aria-label (read from the two pieces, the ID would sound like two words).
  */
 function RecentChip({ merchant, onPick }: { merchant: RecentMerchant; onPick: () => void }) {
-  const { head, tail } = vpaParts(merchant.pa);
+  const parts = vpaParts(merchant.pa);
+  // A head of one or two characters stays with the tail: it is narrower than the room the head keeps for its ellipsis.
+  const { head, tail } = parts.head.length < 3 ? { head: '', tail: merchant.pa } : parts;
   return (
     <button
       type="button"
@@ -180,7 +208,12 @@ function RecentChip({ merchant, onPick }: { merchant: RecentMerchant; onPick: ()
     >
       {merchant.pn && <span className={s.chipName}>{merchant.pn} </span>}
       <span className={s.chipId}>
-        {head && <span className={s.chipHead}>{head}</span>}
+        {/* The head is clipped from its start (see .chipHead); <bdi> keeps its characters in order. */}
+        {head && (
+          <span className={s.chipHead}>
+            <bdi>{head}</bdi>
+          </span>
+        )}
         <span className={s.chipTail}>{tail}</span>
       </span>
     </button>
@@ -223,6 +256,9 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill, howItWorks
   const resultRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const focusResult = useRef(false);
+  // Keys each amount field has dropped since it last took one (see changeAmount).
+  const totalCarry = useRef('');
+  const maxCarry = useRef('');
 
   // After a split: bring the result into view and move focus to its heading.
   useEffect(() => {
@@ -230,6 +266,19 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill, howItWorks
     focusResult.current = false;
     revealResult(resultRef.current, headingRef.current);
   }, [plan]);
+
+  // Ticks made in another tab (or the installed app) show here too. Storage events only reach the
+  // other tabs, and a plan for another payment, or none, leaves this one as it is.
+  useEffect(() => {
+    if (placeholder) return;
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== PLAN_KEY) return;
+      const stored = parsePlan(readJson(PLAN_KEY));
+      if (stored) setPlan((current) => (current ? latestPlan(current, stored) : current));
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [placeholder]);
 
   const totalNum = parseAmount(total);
   const maxNum = parseAmount(max);
@@ -290,10 +339,16 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill, howItWorks
     setTotal(formatInputAmount(total));
     setMax(formatInputAmount(max));
     setRestored(false);
-    // Splitting the same payment again (say, tapping Split above a restored plan) keeps its paid ticks.
-    const next = shouldKeepPlan(plan, input) ? plan : createPlan(input);
+    // Splitting the same payment again (say, tapping Split above a restored plan) keeps its paid ticks. With no
+    // plan on screen (a prefill link hides one for another payment), that is the saved plan when it matches.
+    const current = plan ?? resumablePlan(parsePlan(readJson(PLAN_KEY)), input);
+    const next = shouldKeepPlan(current, input) ? current : createPlan(input);
     if (next === plan) {
       revealResult(resultRef.current, headingRef.current);
+    } else if (next === current) {
+      // The saved plan in progress comes back as it is, so the cut isn't played on it.
+      focusResult.current = true;
+      setPlan(next);
     } else {
       focusResult.current = true;
       setCuts((c) => c + 1);
@@ -317,7 +372,8 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill, howItWorks
 
   function togglePaid(index: number, paid: boolean) {
     if (!plan) return;
-    const next = { ...plan, parts: plan.parts.map((p) => (p.index === index ? { ...p, paid } : p)) };
+    // From the saved plan when it is this payment, so ticks made in another tab since are kept, not overwritten.
+    const next = withPaid(plan, index, paid, parsePlan(readJson(PLAN_KEY)));
     setPlan(next);
     writeJson(PLAN_KEY, next);
   }
@@ -390,10 +446,11 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill, howItWorks
               placeholder="0"
               value={total}
               onChange={(e) => {
-                changeAmount(e, total, setTotal);
+                changeAmount(e, total, setTotal, totalCarry);
                 editing('total');
               }}
               onBlur={() => {
+                totalCarry.current = '';
                 setTotal(formatInputAmount);
                 leave('total');
               }}
@@ -509,10 +566,11 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill, howItWorks
                 autoComplete="off"
                 value={max}
                 onChange={(e) => {
-                  changeAmount(e, max, setMax);
+                  changeAmount(e, max, setMax, maxCarry);
                   editing('max');
                 }}
                 onBlur={() => {
+                  maxCarry.current = '';
                   setMax(formatInputAmount);
                   leave('max');
                 }}
@@ -524,12 +582,18 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill, howItWorks
           </div>
         </details>
 
-        {/* aria-disabled rather than disabled: it stays focusable, and pressing it explains what's missing. */}
+        {/*
+          * aria-disabled rather than disabled: it stays focusable, and pressing it explains what's missing.
+          * A press doesn't take focus from the field being typed in. Leaving the field would show its error at once
+          * and push the button down before the click landed, losing the click; submit() checks every field anyway
+          * and moves focus itself.
+          */}
         <button
           type="submit"
           className={`btn ${splitShown ? 'btn-secondary' : 'btn-primary'} btn-lg ${s.submit}`}
           aria-disabled={!valid}
           aria-describedby={valid ? undefined : 'submit-hint'}
+          onMouseDown={(e) => e.preventDefault()}
         >
           {splitLabel(valid, partCount)}
         </button>
