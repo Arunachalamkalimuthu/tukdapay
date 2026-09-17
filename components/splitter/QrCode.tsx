@@ -1,7 +1,8 @@
 'use client';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { modulesToPath } from '@/lib/qr';
 
-/** Keep in sync with the media query that shows .partQr in Splitter.module.css. */
+/** Keep in sync with the media queries that show .qrSlot and .nextScan in Splitter.module.css. */
 const WIDE_QUERY = '(min-width: 700px) and (hover: hover)';
 
 function subscribeWide(onChange: () => void) {
@@ -26,19 +27,25 @@ interface Props {
  */
 export function QrCode(props: Props) {
   const wide = useSyncExternalStore(subscribeWide, isWide, isWideOnServer);
-  return wide ? <QrCanvas {...props} /> : null;
+  return wide ? <QrSvg {...props} /> : null;
 }
 
-function QrCanvas({ value, label, className }: Props) {
-  const ref = useRef<HTMLCanvasElement>(null);
+interface QrSymbol {
+  size: number;
+  path: string;
+}
+
+/** Drawn as SVG so it stays crisp at whatever size the layout gives it (128px or 168px). */
+function QrSvg({ value, label, className }: Props) {
+  const [symbol, setSymbol] = useState<QrSymbol | null>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     import('qrcode')
       .then((QR) => {
-        const canvas = ref.current;
-        if (!cancelled && canvas) return QR.toCanvas(canvas, value, { width: 160, margin: 0 });
+        const { modules } = QR.create(value, { errorCorrectionLevel: 'M' });
+        if (!cancelled) setSymbol({ size: modules.size, path: modulesToPath(modules.size, modules.data) });
       })
       .catch(() => {
         if (!cancelled) setFailed(true);
@@ -49,9 +56,12 @@ function QrCanvas({ value, label, className }: Props) {
   }, [value]);
 
   if (failed) return <p className={className}>QR unavailable — use the link on your phone.</p>;
+  const size = symbol?.size ?? 1;
   return (
     <div className={className}>
-      <canvas ref={ref} role="img" aria-label={label} width={160} height={160} />
+      <svg role="img" aria-label={label} viewBox={`0 0 ${size} ${size}`} shapeRendering="crispEdges">
+        {symbol && <path d={symbol.path} fill="currentColor" />}
+      </svg>
     </div>
   );
 }
