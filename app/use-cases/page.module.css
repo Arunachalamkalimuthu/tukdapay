@@ -1,61 +1,93 @@
-.intro h1 { font-size: 40px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.02; margin: 0 0 12px; }
-.intro p { margin: 0 0 12px; color: var(--muted); max-width: 52ch; }
+/* Use cases: an index, then each bill separated by a rule (no cards). */
 
-/* Jump links: outlined pills, so they don't read as payment chips. */
-.jump ul { list-style: none; margin: 20px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
-.jump a {
-  display: inline-block; padding: 5px 12px; border: 1.5px solid var(--line); border-radius: 999px;
-  color: var(--ink); text-decoration: none; font-size: 15px; font-weight: 500;
+/*
+ * Measures are in em, not ch. ch is the width of "0", and Bricolage's zero (0.65em) is wider than the
+ * fallback's (0.59em), so a ch measure narrows when the web font arrives and the text below jumps.
+ * Each em value is the old ch measure as drawn in Bricolage (1ch = 0.6513em).
+ */
+
+.intro h1 {
+  font-size: var(--text-display); font-weight: 800; letter-spacing: -0.03em; line-height: 1.02;
+  margin: 0 0 var(--space-16);
 }
-.jump a:hover { border-color: var(--accent); color: var(--accent); }
+.intro p { margin: 0; color: var(--muted); max-width: 33.9em; text-wrap: pretty; }
+.intro p + p { margin-top: var(--space-12); }
 
-.list { display: grid; gap: 16px; margin-top: 32px; }
-
-.card {
-  background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius);
-  padding: 20px 16px; scroll-margin-top: 16px;
+/*
+ * ---- Index: "Households ······ ₹4,200" ----
+ * A grid, so the column count depends only on the viewport, never on how wide the words are (or which
+ * font has loaded): one column on the narrowest phones, two from 390px. If larger text or wider spacing
+ * leaves no room for the total, it wraps under the name instead of overflowing.
+ */
+.index { margin-top: var(--space-24); }
+.index ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr; column-gap: var(--space-16); }
+.index li { min-width: 0; }
+.index a {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; min-height: 44px; padding-block: 9px;
+  color: var(--ink); text-decoration: none;
 }
-.card:target { border-color: var(--accent); }
-
-.head { margin: 0 0 8px; }
-.who { margin: 0 0 4px; color: var(--accent); font-size: 14px; font-weight: 700; }
-.head h2 { font-size: 22px; font-weight: 800; }
-.story { margin: 0 0 16px; color: var(--muted); max-width: 56ch; }
-
-/* The split, inset on the paper colour like a receipt. */
-.split { background: var(--paper); border-radius: 8px; padding: 12px 10px; margin: 0 0 14px; }
-.sum { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin: 0 0 10px; }
-.total { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
-.arrow, .count { color: var(--muted); font-weight: 500; }
-
-/* Each "+" stays glued to the chip before it, so lines break after a "+" and never start with one. */
-.chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; row-gap: 6px; font-weight: 700; }
-.chips li { display: inline-flex; align-items: center; }
-.chip {
-  background: var(--surface); border: 1.5px solid var(--line); border-radius: 8px;
-  padding: 2px 7px; font-size: 15px; white-space: nowrap;
+/* A quiet underline at rest says "link" on touch screens too; it turns magenta on hover. */
+.indexName {
+  font-weight: 500;
+  text-decoration: underline; text-decoration-color: var(--field);
+  text-decoration-thickness: 1.5px; text-underline-offset: 3px;
 }
-.chip.last { border-color: var(--accent); color: var(--accent); }
-.plus { color: var(--muted); font-weight: 500; padding: 0 5px; }
-
-.tip { margin: 0 0 16px; color: var(--muted); font-size: 15px; max-width: 56ch; }
-.tip strong { color: var(--ink); }
-
-.action { width: 100%; }
-
-.merchants ul { margin: 0; padding-left: 20px; color: var(--muted); max-width: 60ch; }
-.merchants li { margin: 0 0 8px; }
-.merchants strong { color: var(--ink); }
-
-.cta p { margin: 0 0 18px; color: var(--muted); max-width: 52ch; }
-
-.srOnly {
-  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
-  overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+.leader {
+  flex: 1 1 auto; min-width: 8px; align-self: baseline;
+  height: 3px; margin-bottom: 1px;
+  border-bottom: 2px dotted var(--field);
 }
+.indexTotal { margin-left: auto; font-weight: 650; white-space: nowrap; }
+.index a:hover .indexName { color: var(--accent); text-decoration-color: var(--accent); }
+
+@media (min-width: 390px) {
+  .index ul { grid-template-columns: 1fr 1fr; }
+}
+@media (min-width: 520px) {
+  .index ul { column-gap: var(--space-24); }
+}
+
+/* ---- Each bill ---- */
+.cases { margin-top: var(--space-32); }
+.case { padding-block: var(--space-32) 40px; border-top: 1px solid var(--line); scroll-margin-top: var(--space-16); }
+/* After a jump from the index, the rule above the bill you picked turns magenta. */
+.case:target { border-top-color: var(--accent); box-shadow: inset 0 1px 0 var(--accent); }
+
+.caseHead { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--space-16); align-items: baseline; }
+.caseHead h2 { font-size: calc(var(--text-heading) - 2px); font-weight: 720; letter-spacing: -0.02em; line-height: 1.15; }
+.caseTotal { margin: 0; white-space: nowrap; }
+.who { margin: var(--space-4) 0 0; color: var(--muted); font-size: var(--text-small); line-height: 1.45; text-wrap: pretty; }
+.story { margin: var(--space-12) 0 0; max-width: 36.5em; text-wrap: pretty; }
+
+.slip {
+  margin-top: 20px; padding: 14px var(--space-16) var(--space-16);
+  background: var(--surface); border-radius: var(--radius-lg);
+}
+.slipHead { margin: 0 0 var(--space-12); color: var(--muted); font-size: var(--text-label); font-weight: 500; line-height: 1.3; }
+.slipTotal { color: var(--ink); font-weight: 700; }
+
+.tip { margin: var(--space-16) 0 0; color: var(--muted); font-size: var(--text-small); line-height: 1.45; max-width: 36.5em; text-wrap: pretty; }
+.tip strong { color: var(--ink); font-weight: 650; }
+
+.action { width: 100%; margin-top: 20px; }
+
+/* ---- If you're the merchant: a quiet list ---- */
+.merchants { padding-top: var(--space-32); border-top: 1px solid var(--line); }
+.merchants h2,
+.cta h2 { font-size: var(--text-heading); font-weight: 720; letter-spacing: -0.02em; line-height: 1.15; }
+.merchants ul { list-style: none; margin: var(--space-16) 0 0; padding: 0; display: grid; gap: var(--space-16); max-width: 39.1em; }
+.merchants li { color: var(--muted); text-wrap: pretty; }
+.merchants strong { color: var(--ink); font-weight: 650; }
+
+/* ---- Your bill isn't on the list? ---- */
+.cta { margin-top: var(--space-48); padding-top: var(--space-32); border-top: 1px solid var(--line); }
+.cta p { margin: var(--space-12) 0 0; color: var(--muted); max-width: 33.9em; text-wrap: pretty; }
 
 @media (min-width: 520px) {
-  .card { padding: 24px; }
-  .split { padding: 14px; }
   .action { width: auto; }
+}
+
+@media (forced-colors: active) {
+  .leader { border-bottom-color: CanvasText; }
+  .slip { border: 1px solid CanvasText; }
 }

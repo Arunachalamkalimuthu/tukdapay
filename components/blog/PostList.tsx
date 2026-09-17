@@ -13,7 +13,8 @@ interface Props {
 export function PostList({ posts, headingLevel, compact = false }: Props) {
   const Heading = headingLevel === 2 ? 'h2' : 'h3';
   return (
-    <ul className={compact ? `${s.list} ${s.compact}` : s.list}>
+    // role="list": Safari drops list semantics from lists styled without bullets.
+    <ul role="list" className={compact ? `${s.list} ${s.compact}` : s.list}>
       {posts.map((p) => (
         <li key={p.slug}>
           <Heading className={s.title}>

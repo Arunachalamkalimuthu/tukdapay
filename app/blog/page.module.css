@@ -1,5 +1,13 @@
-.intro { margin: 0 0 36px; }
-.intro h1 { font-size: 40px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.02; margin: 0 0 12px; }
-.intro p { margin: 0; color: var(--muted); max-width: 46ch; }
+.intro h1 {
+  font-size: var(--text-display); font-weight: 800; letter-spacing: -0.03em; line-height: 1.02;
+  margin: 0 0 var(--space-16);
+}
+/* 30em, not var(--measure-narrow) (46ch): a ch measure narrows when the web font arrives, and the posts below jump. */
+.intro p { margin: 0; color: var(--muted); font-size: var(--text-lede); line-height: 1.4; max-width: 30em; text-wrap: pretty; }
 
-.feed { margin: 44px 0 0; border-top: 1.5px solid var(--line); padding-top: 20px; color: var(--muted); font-size: 15px; }
+.posts { margin-top: 40px; }
+
+.feed {
+  margin: 0; padding-top: 20px; border-top: 1px solid var(--line);
+  color: var(--muted); font-size: var(--text-small); line-height: 1.45;
+}

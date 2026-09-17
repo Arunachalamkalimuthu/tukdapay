@@ -1,11 +1,19 @@
-.wrap { padding-top: 56px; }
-.code { margin: 0 0 8px; color: var(--accent); font-weight: 800; font-size: 15px; letter-spacing: 0.06em; }
-.title { font-size: 36px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; margin: 0 0 12px; }
-.lead { margin: 0 0 28px; color: var(--muted); max-width: 42ch; }
-.primary { width: 100%; }
-.more { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.strip { margin: 20px 0 var(--space-32); }
 
+.title {
+  font-size: var(--text-display); font-weight: 800; letter-spacing: -0.03em; line-height: 1.02;
+  margin: 0 0 var(--space-12);
+}
+/* 27.4em is 42ch in Bricolage; em doesn't change width when the web font replaces the fallback. */
+.lead { margin: 0 0 28px; color: var(--muted); max-width: 27.4em; text-wrap: pretty; }
+
+/* Phone: the primary action full width, the other two as halves under it. */
+.primary { width: 100%; }
+.more { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8); margin-top: var(--space-8); }
+
+/* Wider: all three in one row. */
 @media (min-width: 520px) {
+  .actions { display: flex; flex-wrap: wrap; gap: var(--space-12); }
   .primary { width: auto; }
-  .more { display: flex; flex-wrap: wrap; }
+  .more { display: flex; gap: var(--space-12); margin-top: 0; }
 }

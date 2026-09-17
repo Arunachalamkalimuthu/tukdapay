@@ -1,13 +1,26 @@
-.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 26px; }
-.list li { display: grid; gap: 4px; }
+/* Blog index: posts separated by rules, no cards. */
+.list { list-style: none; margin: 0; padding: 0; }
+.list li { display: grid; gap: 6px; padding-block: var(--space-24); border-top: 1px solid var(--line); }
 
-.title { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; margin: 0; text-wrap: balance; }
+.title {
+  position: relative;
+  font-size: var(--text-heading); font-weight: 720; letter-spacing: -0.02em; line-height: 1.15; margin: 0; text-wrap: balance;
+}
 .title a { color: var(--ink); text-decoration: none; }
-.title a:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.title a:hover { color: var(--accent); text-decoration: underline; }
+/*
+ * The tap target: the title's row, stretched above and below so a one-line title is at least 44px tall.
+ * It's a pseudo-element, so the layout and the focus ring stay where the text is.
+ */
+.title a::after { content: ''; position: absolute; inset: -9px 0; }
 
-.description { margin: 0; color: var(--muted); max-width: 52ch; }
-.date { margin: 0; color: var(--muted); font-size: 15px; }
+/* 36.5em is 56ch in Bricolage; em doesn't change width when the web font replaces the fallback. */
+.description { margin: 0; max-width: 36.5em; text-wrap: pretty; }
+.date { margin: 0; color: var(--muted); font-size: var(--text-small); line-height: 1.45; }
 
-.compact { gap: 18px; }
-.compact li { gap: 2px; }
-.compact .title { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+/* "More from the blog", at the end of a post: smaller titles, muted descriptions, no rules or dates. */
+.compact { display: grid; gap: var(--space-16); }
+.compact li { gap: 2px; padding: 0; border: 0; }
+.compact .title { font-size: 18px; font-weight: 650; letter-spacing: -0.01em; line-height: 1.25; }
+.compact .title a::after { inset-block: -11px; }
+.compact .description { color: var(--muted); font-size: var(--text-small); line-height: 1.45; }
