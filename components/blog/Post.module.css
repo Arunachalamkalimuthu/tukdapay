@@ -7,12 +7,16 @@
 }
 .post h2 { font-size: var(--text-heading); font-weight: 720; letter-spacing: -0.02em; line-height: 1.15; margin: 40px 0 10px; }
 .post h3 { font-size: 19px; font-weight: 680; letter-spacing: -0.01em; line-height: 1.25; margin: 28px 0 6px; }
-.post p { margin: 0 0 14px; }
+.post p { margin: 0 0 14px; text-wrap: pretty; }
+/*
+ * 40.4em is var(--measure) (62ch) as drawn in Bricolage. A ch measure narrows when the web font replaces
+ * the fallback (its zero is wider), which re-wraps every paragraph; em stays put.
+ */
 .post p,
-.post li { max-width: var(--measure); }
+.post li { max-width: 40.4em; }
 .post ul,
 .post ol { margin: 0 0 14px; padding-left: 22px; }
-.post li { margin: 6px 0; }
+.post li { margin: 6px 0; text-wrap: pretty; }
 .post li::marker { color: var(--muted); }
 .post strong { font-weight: 650; }
 
@@ -47,6 +51,12 @@
 .post th:last-child,
 .post td:last-child { padding-right: 0; }
 .post td code { white-space: nowrap; }
+/* Narrow phones: tighter gaps between columns so a table with unbreakable code still fits at 320px.
+   The first and last cells keep their flush edge (the :first-child and :last-child rules are more specific). */
+@media (max-width: 399px) {
+  .post th,
+  .post td { padding-inline: 8px; }
+}
 
 /* Markdown's right-aligned columns hold money. MDX writes the alignment as a style; plain HTML may use align. */
 .post th[align='right'],
@@ -71,7 +81,7 @@
 .post .meta a { display: inline-flex; align-items: center; min-height: 44px; color: var(--muted); }
 .post .meta a:hover { color: var(--ink); }
 
-.post .lede { margin: 0 0 var(--space-8); color: var(--muted); font-size: var(--text-lede); line-height: 1.4; }
+.post .lede { margin: 0 0 var(--space-8); color: var(--muted); font-size: var(--text-lede); line-height: 1.4; text-wrap: pretty; }
 
 .post .callout { margin: var(--space-24) 0; padding: var(--space-16) 18px; background: var(--accent-wash); border-radius: var(--radius-lg); }
 .post .callout p { margin: 0; }

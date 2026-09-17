@@ -4,7 +4,8 @@
   font-size: var(--text-display); font-weight: 800; letter-spacing: -0.03em; line-height: 1.02;
   margin: 0 0 var(--space-12);
 }
-.lead { margin: 0 0 28px; color: var(--muted); max-width: 42ch; }
+/* 27.4em is 42ch in Bricolage; em doesn't change width when the web font replaces the fallback. */
+.lead { margin: 0 0 28px; color: var(--muted); max-width: 27.4em; text-wrap: pretty; }
 
 /* Phone: the primary action full width, the other two as halves under it. */
 .primary { width: 100%; }

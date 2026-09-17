@@ -51,9 +51,10 @@ export default function UseCasesPage() {
         </p>
       </header>
 
-      {/* An index, like a price list: the kind of bill, dot leaders, then its total. */}
+      {/* An index, like a price list: the kind of bill, dot leaders, then its total.
+          role="list" because Safari drops list semantics from lists styled without bullets. */}
       <nav className={s.index} aria-label="Jump to a use case">
-        <ul>
+        <ul role="list">
           {scenarios.map((u) => (
             <li key={u.slug}>
               <a href={`#${u.slug}`}>
@@ -105,7 +106,7 @@ export default function UseCasesPage() {
 
       <section className={s.merchants} aria-labelledby="merchants-title">
         <h2 id="merchants-title">If you’re the merchant</h2>
-        <ul>
+        <ul role="list">
           <li>
             <strong>Say yes or no up front.</strong> A sign at the counter (“Split UPI payments welcome” or “One
             payment per bill”) saves a conversation.

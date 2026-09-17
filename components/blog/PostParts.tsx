@@ -34,12 +34,14 @@ export function CodeBlock(props: ComponentPropsWithoutRef<'pre'>) {
 }
 
 /**
- * Markdown tables, wrapped so wide ones scroll inside the post instead of the page.
- * Like CodeBlock, the wrapper takes focus so keyboard users can scroll it (Safari won't on its own).
+ * Markdown tables, wrapped so a table that doesn't fit scrolls inside the post instead of the page.
+ * The tables fit at 320px as written, but zoom or wider text spacing can still push one past its column,
+ * so the wrapper takes focus and keyboard users can scroll it (Safari won't on its own). The name says
+ * only what is always true: it's a table, whether or not it scrolls right now.
  */
 export function ScrollTable(props: ComponentPropsWithoutRef<'table'>) {
   return (
-    <div className={s.tableScroll} tabIndex={0} role="region" aria-label="Scrollable table">
+    <div className={s.tableScroll} tabIndex={0} role="region" aria-label="Table">
       <table {...props} />
     </div>
   );
