@@ -1,10 +1,10 @@
 'use client';
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { useSearchParams } from 'next/navigation';
 import { splitAmount } from '@/lib/split';
 import { isValidVpa } from '@/lib/upi';
-import { countParts, createPlan, MAX_PARTS, parsePlan, shouldKeepPlan, type Plan } from '@/lib/plan';
+import { countParts, createPlan, MAX_PARTS, parsePlan, sameInput, shouldKeepPlan, type Plan } from '@/lib/plan';
 import {
   amountToInput,
   editAmountInput,
@@ -20,7 +20,7 @@ import { parseRecent, rememberMerchant, type RecentMerchant } from '@/lib/recent
 import { readJson, writeJson } from '@/lib/storage';
 import { DEFAULT_MAX } from '@/lib/site';
 import { collapseText, EXAMPLE_PARTS, EXAMPLE_TOTAL } from '@/lib/strip';
-import { amountReading, amountSize, previewText, resumeNotice, splitLabel } from '@/lib/splitter';
+import { amountReading, amountSize, previewText, resumeNoticeParts, shortReading, splitLabel, vpaParts } from '@/lib/splitter';
 import { TukdaStrip } from '@/components/TukdaStrip';
 import { PlanResult } from './PlanResult';
 import s from './Splitter.module.css';
@@ -164,6 +164,29 @@ function FieldError({ id, children }: { id: string; children: ReactNode }) {
   );
 }
 
+/**
+ * A saved merchant. When the chip is too narrow for the whole UPI ID, the start of the ID gives
+ * way to an ellipsis and its end stays in view. Screen readers get the full name and ID from
+ * aria-label (read from the two pieces, the ID would sound like two words).
+ */
+function RecentChip({ merchant, onPick }: { merchant: RecentMerchant; onPick: () => void }) {
+  const { head, tail } = vpaParts(merchant.pa);
+  return (
+    <button
+      type="button"
+      className={s.recentChip}
+      aria-label={merchant.pn ? `${merchant.pn} ${merchant.pa}` : merchant.pa}
+      onClick={onPick}
+    >
+      {merchant.pn && <span className={s.chipName}>{merchant.pn} </span>}
+      <span className={s.chipId}>
+        {head && <span className={s.chipHead}>{head}</span>}
+        <span className={s.chipTail}>{tail}</span>
+      </span>
+    </button>
+  );
+}
+
 const EXAMPLE_TEXT = `Example: ${formatRupees(EXAMPLE_TOTAL)} becomes ${collapseText(EXAMPLE_PARTS)}.`;
 
 const cx = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(' ');
@@ -187,8 +210,12 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill, howItWorks
   const [advancedOpen, setAdvancedOpen] = useState(() => parseAmount(initial.max) !== DEFAULT_MAX);
   // True while the plan on screen was read back from storage rather than split in this visit.
   const [restored, setRestored] = useState(initial.plan !== null);
-  // Plans split in this visit. Each new one plays "the cut" on the result strip; a restored plan never does.
+  // Plans split in this visit. Each new one remounts the result strip and plays "the cut" on it once;
+  // a restored plan never does. cutPending is cleared as soon as the cut has played, so a later
+  // tick only gets the strip's short feedback transitions.
   const [cuts, setCuts] = useState(0);
+  const [cutPending, setCutPending] = useState(false);
+  const cutDone = useCallback(() => setCutPending(false), []);
 
   const totalRef = useRef<HTMLInputElement>(null);
   const paRef = useRef<HTMLInputElement>(null);
@@ -226,6 +253,10 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill, howItWorks
           : 'Max per payment must be more than ₹0.',
   };
   const valid = !errors.total && !errors.pa && !errors.max;
+  const input = { total: totalNum, pa: pa.trim(), pn: pn.trim(), note: note.trim(), maxPerTxn: maxNum };
+  // The plan on screen is already this form's split: Split only brings it back into view, so it
+  // steps back from solid magenta and leaves that to the result's next action.
+  const splitShown = valid && !!plan && sameInput(plan.input, input);
   // Errors show once a field has been left (or on a split attempt). Too many parts, or an
   // amount over the cap, shows straight away in place of the live preview it replaces.
   const shows = (f: Field) => !!errors[f] && (!!touched[f] || (f === 'total' && (tooManyParts || tooLarge)));
@@ -233,7 +264,8 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill, howItWorks
   const totalEmpty = total.trim() === '';
   const totalError = shows('total');
   const reading = amountReading({ empty: totalEmpty, parts: preview, error: totalError });
-  const notice = resumeNotice(plan, restored);
+  const short = shortReading(reading);
+  const notice = resumeNoticeParts(plan, restored);
 
   const leave = (f: Field) => setTouched((t) => ({ ...t, [f]: true }));
   // Once a field is fine, editing it again hides its error until it is left again.
@@ -258,7 +290,6 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill, howItWorks
     setTotal(formatInputAmount(total));
     setMax(formatInputAmount(max));
     setRestored(false);
-    const input = { total: totalNum, pa: pa.trim(), pn: pn.trim(), note: note.trim(), maxPerTxn: maxNum };
     // Splitting the same payment again (say, tapping Split above a restored plan) keeps its paid ticks.
     const next = shouldKeepPlan(plan, input) ? plan : createPlan(input);
     if (next === plan) {
@@ -266,6 +297,7 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill, howItWorks
     } else {
       focusResult.current = true;
       setCuts((c) => c + 1);
+      setCutPending(true);
       setPlan(next);
     }
     const saved = writeJson(PLAN_KEY, next);
@@ -293,6 +325,7 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill, howItWorks
   function startOver() {
     setPlan(null);
     setRestored(false);
+    setCutPending(false);
     writeJson(PLAN_KEY, null);
     setTotal('');
     setPa('');
@@ -317,7 +350,7 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill, howItWorks
       >
         {notice && (
           <p className={s.resume}>
-            <span>{notice}</span>{' '}
+            {notice.lead} <span className={s.nowrap}>{notice.next}</span>{' '}
             <a
               href="#result-title"
               onClick={(e) => {
@@ -340,7 +373,10 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill, howItWorks
         >
           <div className={s.instHead}>
             <label className={s.label} htmlFor="total">Amount</label>
-            <span className={s.reading} aria-hidden="true">{reading}</span>
+            <span className={s.reading} aria-hidden="true">
+              <span className={s.readingFull}>{reading}</span>
+              {short !== reading && <span className={s.readingShort}>{short}</span>}
+            </span>
           </div>
           <div className={s.amountRow}>
             <span className={`${s.rupee} money`} aria-hidden="true">₹</span>
@@ -411,19 +447,14 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill, howItWorks
           {recent.length > 0 && (
             <div className={s.recent} role="group" aria-label="Recent merchants">
               {recent.map((r) => (
-                <button
+                <RecentChip
                   key={r.pa.toLowerCase()}
-                  type="button"
-                  className={s.recentChip}
-                  title={r.pn ? `${r.pn} ${r.pa}` : r.pa}
-                  onClick={() => {
+                  merchant={r}
+                  onPick={() => {
                     setPa(r.pa);
                     setPn(r.pn);
                   }}
-                >
-                  {r.pn && <span className={s.chipName}>{r.pn} </span>}
-                  <span className={s.chipId}>{r.pa}</span>
-                </button>
+                />
               ))}
             </div>
           )}
@@ -496,7 +527,7 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill, howItWorks
         {/* aria-disabled rather than disabled: it stays focusable, and pressing it explains what's missing. */}
         <button
           type="submit"
-          className={`btn btn-primary btn-lg ${s.submit}`}
+          className={`btn ${splitShown ? 'btn-secondary' : 'btn-primary'} btn-lg ${s.submit}`}
           aria-disabled={!valid}
           aria-describedby={valid ? undefined : 'submit-hint'}
         >
@@ -514,6 +545,8 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill, howItWorks
             onTogglePaid={togglePaid}
             onStartOver={startOver}
             cut={cuts}
+            animateCut={cutPending}
+            onCutDone={cutDone}
           />
         ) : (
           howItWorks

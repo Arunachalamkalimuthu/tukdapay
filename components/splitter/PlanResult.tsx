@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, type CSSProperties, type Ref } from 'react';
+import { Fragment, useEffect, useRef, useState, type CSSProperties, type ReactNode, type Ref } from 'react';
 import { breakdownText, type Plan } from '@/lib/plan';
 import { formatInr } from '@/lib/format';
 import { planProgress } from '@/lib/splitter';
@@ -14,18 +14,61 @@ interface Props {
   headingRef: Ref<HTMLHeadingElement>;
   onTogglePaid: (index: number, paid: boolean) => void;
   onStartOver: () => void;
-  /**
-   * How many plans were split in this visit; 0 for a plan restored from storage. A new value
-   * redraws the progress strip and plays "the cut" once.
-   */
+  /** How many plans were split in this visit. A new value mounts a fresh progress strip. */
   cut: number;
+  /**
+   * Play "the cut" on the progress strip: true only for a plan just split in this visit, and only
+   * until it has played (onCutDone), so later ticks don't replay it.
+   */
+  animateCut: boolean;
+  onCutDone: () => void;
+}
+
+/** "₹1,00,000.00" with a line-break opportunity after each comma, and nowhere else. */
+function breakAfterCommas(figure: string): ReactNode {
+  return figure.split(',').map((group, i, groups) => (
+    <Fragment key={i}>
+      {group}
+      {i < groups.length - 1 && (
+        <>
+          ,<wbr />
+        </>
+      )}
+    </Fragment>
+  ));
 }
 
 type CopyState = 'Copied' | 'Copy failed' | null;
 const COPY_LABELS = ['Copy breakdown', 'Copied', 'Copy failed'] as const;
 
-export function PlanResult({ plan, sectionRef, headingRef, onTogglePaid, onStartOver, cut }: Props) {
+export function PlanResult({ plan, sectionRef, headingRef, onTogglePaid, onStartOver, cut, animateCut, onCutDone }: Props) {
   const [copied, setCopied] = useState<CopyState>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+
+  // The cut ends on the strip's animationend. If it never runs (reduced motion, a hidden tab),
+  // stop waiting for it after a moment so it can't start later on a tick.
+  useEffect(() => {
+    if (!animateCut) return;
+    const timer = setTimeout(onCutDone, 1000);
+    return () => clearTimeout(timer);
+  }, [animateCut, onCutDone]);
+
+  // Keyboard focus is never hidden under the sticky bar: the page keeps the bar's real height clear
+  // at the bottom when it scrolls a focused control into view (see .bar in the CSS). The bar grows
+  // with its text (a wrapped label, the done message, bigger text settings), so it is measured.
+  useEffect(() => {
+    const bar = barRef.current;
+    if (!bar) return;
+    const root = document.documentElement;
+    const observer = new ResizeObserver(() => {
+      root.style.setProperty('--bar-h', `${Math.ceil(bar.getBoundingClientRect().height)}px`);
+    });
+    observer.observe(bar);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty('--bar-h');
+    };
+  }, []);
 
   // Put the button label back after a moment; the timer is cleared on unmount.
   useEffect(() => {
@@ -86,17 +129,22 @@ export function PlanResult({ plan, sectionRef, headingRef, onTogglePaid, onStart
                 </span>
                 <span className={s.tickLabel} aria-hidden="true">Paid</span>
               </label>
-              <span className={`${s.partAmount} money`}>{formatInr(p.amount)}</span>
-              <span className={s.partLabel}>Part {number} of {n}</span>
-              {p.paid ? (
-                <a className={`btn btn-tertiary ${s.partPay} ${s.payAgain}`} href={p.url} aria-label={`Pay again ${which}`}>
-                  Pay again
-                </a>
-              ) : (
-                <a className={`btn btn-outline ${s.partPay}`} href={p.url} aria-label={`Pay ${which}`}>
-                  Pay
-                </a>
-              )}
+              {/* Figures left, Pay right; Pay drops under the figures when they need the room. */}
+              <div className={s.partBody}>
+                <div className={s.partFigures}>
+                  <span className={`${s.partAmount} money`}>{breakAfterCommas(formatInr(p.amount))}</span>
+                  <span className={s.partLabel}>Part {number} of {n}</span>
+                </div>
+                {p.paid ? (
+                  <a className={`btn btn-tertiary ${s.partPay} ${s.payAgain}`} href={p.url} aria-label={`Pay again ${which}`}>
+                    Pay again
+                  </a>
+                ) : (
+                  <a className={`btn btn-outline ${s.partPay}`} href={p.url} aria-label={`Pay ${which}`}>
+                    Pay
+                  </a>
+                )}
+              </div>
               <div className={s.qrSlot}>
                 <QrCode key={p.url} value={p.url} label={`QR code for ${which}`} className={s.qr} />
                 {/* Dimmed with a label once paid, so nobody scans it twice. */}
@@ -108,8 +156,12 @@ export function PlanResult({ plan, sectionRef, headingRef, onTogglePaid, onStart
       </ol>
 
       {/* The one action bar: sticks to the bottom of the screen while the parts scroll past. */}
-      <div className={s.bar} data-result-bar="" data-done={allPaid || undefined}>
+      <div ref={barRef} className={s.bar} data-result-bar="" data-done={allPaid || undefined}>
         <div
+          onAnimationEnd={(e) => {
+            // The gaps opening is the cut's last step (the other parts of it end at the same time).
+            if (e.animationName.includes('open')) onCutDone();
+          }}
           role="progressbar"
           aria-label="Payments made"
           aria-valuemin={0}
@@ -122,13 +174,17 @@ export function PlanResult({ plan, sectionRef, headingRef, onTogglePaid, onStart
             variant="progress"
             parts={parts.map((p) => p.amount)}
             paid={parts.map((p) => p.paid)}
-            animateCut={cut > 0}
+            animateCut={animateCut}
           />
         </div>
         <div aria-live="polite">
           <p className={s.status}>
             <b>{status}</b>
-            {!allPaid && <span className={`${s.toGo} money`}>{formatInr(toGo)} to go</span>}
+            {!allPaid && (
+              <span className={s.toGo}>
+                <span className="money">{formatInr(toGo)}</span> to go
+              </span>
+            )}
           </p>
           {allPaid && <p className={s.done}>Done — all parts paid. Share the breakdown with the shop if they need it.</p>}
         </div>
@@ -176,7 +232,7 @@ export function PlanResult({ plan, sectionRef, headingRef, onTogglePaid, onStart
       </p>
 
       <p className={s.fine}>
-        Each Pay button opens your UPI app with the amount and note filled in. This page can&apos;t see whether a
+        Each Pay button opens your UPI app with the amount and note filled in. This page can’t see whether a
         payment went through, so tick each one off yourself. On a computer, scan the QR with your phone instead.
       </p>
     </section>

@@ -31,7 +31,7 @@ const howItWorks = (
   <section className={s.section} aria-labelledby="steps-title">
     <h2 id="steps-title">How it works</h2>
     <ol className={s.steps}>
-      <li><span><strong>Enter the bill</strong> and the merchant&apos;s UPI ID from their sticker or invoice.</span></li>
+      <li><span><strong>Enter the bill</strong> and the merchant’s UPI ID from their sticker or invoice.</span></li>
       <li><span><strong>Split</strong> — TukdaPay breaks it into parts at or under your limit, each tagged <em>Part 1/3</em>, <em>Part 2/3</em>… so the shop can match them.</span></li>
       <li><span><strong>Pay each part</strong> — every Pay button opens your own UPI app with the amount filled in. Tick them off as you go.</span></li>
     </ol>

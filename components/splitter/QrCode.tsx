@@ -35,7 +35,14 @@ interface QrSymbol {
   path: string;
 }
 
-/** Drawn as SVG so it stays crisp at whatever size the layout gives it (128px or 168px). */
+/** The light margin scanners need around a QR code, in modules. */
+const QUIET_ZONE = 4;
+
+/**
+ * Drawn as SVG so it stays crisp at whatever size the layout gives the tile. The view box takes in
+ * the quiet zone, so the tile always has exactly four modules of white around the code, whatever
+ * the tile size and however many modules the link needs.
+ */
 function QrSvg({ value, label, className }: Props) {
   const [symbol, setSymbol] = useState<QrSymbol | null>(null);
   const [failed, setFailed] = useState(false);
@@ -55,11 +62,12 @@ function QrSvg({ value, label, className }: Props) {
     };
   }, [value]);
 
-  if (failed) return <p className={className}>QR unavailable — use the link on your phone.</p>;
+  if (failed) return <p className={className} data-failed="">QR unavailable — use the link on your phone.</p>;
   const size = symbol?.size ?? 1;
+  const box = size + 2 * QUIET_ZONE;
   return (
     <div className={className}>
-      <svg role="img" aria-label={label} viewBox={`0 0 ${size} ${size}`} shapeRendering="crispEdges">
+      <svg role="img" aria-label={label} viewBox={`${-QUIET_ZONE} ${-QUIET_ZONE} ${box} ${box}`} shapeRendering="crispEdges">
         {symbol && <path d={symbol.path} fill="currentColor" />}
       </svg>
     </div>
