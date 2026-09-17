@@ -1,10 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { isValidElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { faq } from '../content/faq.tsx';
+import { posts } from '../content/posts.ts';
 import { tryHref, useCases } from '../content/useCases.ts';
 import { readPrefill } from '../lib/prefill.ts';
+import { toRfc822 } from '../lib/rss.ts';
 import { DEFAULT_MAX } from '../lib/site.ts';
 import { splitAmount } from '../lib/split.ts';
 
@@ -63,4 +66,93 @@ test('no use case ends in a token last payment', () => {
     const last = parts[parts.length - 1];
     assert.ok(last >= 100, `${u.slug}: last payment is only ₹${last}`);
   }
+});
+
+/** The layout's title template adds this to every post title. */
+const TITLE_SUFFIX = ' – TukdaPay';
+const chars = (s: string) => Array.from(s).length;
+const postSource = (slug: string) => readFileSync(new URL(`../app/blog/${slug}/page.mdx`, import.meta.url), 'utf8');
+
+test('post titles fit a search result with the site suffix, and descriptions fit a snippet', () => {
+  for (const p of posts) {
+    const title = chars(p.title + TITLE_SUFFIX);
+    assert.ok(title <= 63, `${p.slug}: title is ${title} characters with the suffix`);
+    const description = chars(p.description);
+    assert.ok(description >= 70 && description <= 160, `${p.slug}: description is ${description} characters`);
+  }
+});
+
+test('post titles and descriptions write ₹2000 the way people search for it', () => {
+  for (const p of posts) {
+    assert.doesNotMatch(`${p.title} ${p.description}`, /₹2,000/, p.slug);
+  }
+});
+
+test('a post’s updated date, when set, is a real date on or after its publish date', () => {
+  for (const p of posts) {
+    assert.doesNotThrow(() => toRfc822(p.date), `${p.slug}: date`);
+    if (p.updated === undefined) continue;
+    const updated = p.updated;
+    assert.doesNotThrow(() => toRfc822(updated), `${p.slug}: updated`);
+    assert.ok(updated >= p.date, `${p.slug}: updated ${updated} is before the publish date ${p.date}`);
+  }
+});
+
+test('posts point to NPCI’s FAQ instead of restating its figures and dates', () => {
+  for (const p of posts) {
+    const src = postSource(p.slug);
+    for (const figure of ['0.4%', '₹300', '₹75,000', '15 October', '₹5 ', '₹1 lakh']) {
+      assert.ok(!src.includes(figure), `${p.slug} restates "${figure}"`);
+    }
+  }
+});
+
+test('post links to the splitter say what they open', () => {
+  for (const p of posts) {
+    const src = postSource(p.slug);
+    assert.doesNotMatch(src, /\[(Open )?TukdaPay\]\(/, p.slug);
+    assert.doesNotMatch(src, /<Cta href="[^"]*">\s*(Open )?TukdaPay\s*<\/Cta>/, p.slug);
+  }
+});
+
+test('every post body links the splitter or the use cases', () => {
+  for (const p of posts) {
+    assert.match(postSource(p.slug), /\]\(\/(use-cases\/[^)]*)?\)|href="\/(use-cases\/[^"]*)?"/, p.slug);
+  }
+});
+
+test('links between posts point at posts that exist', () => {
+  const slugs = new Set(posts.map((p) => p.slug));
+  for (const p of posts) {
+    // Only site-relative links (Markdown or JSX), so an external https://…/blog/…/ URL isn't mistaken for one.
+    for (const [, slug] of postSource(p.slug).matchAll(/(?:\]\(|href=")\/blog\/([a-z0-9-]+)\//g)) {
+      assert.ok(slugs.has(slug), `${p.slug} links /blog/${slug}/, which has no entry in content/posts.ts`);
+    }
+  }
+});
+
+test('links to a section of /use-cases/ point at an id on that page', () => {
+  const page = readFileSync(new URL('../app/use-cases/page.tsx', import.meta.url), 'utf8');
+  for (const p of posts) {
+    for (const [, id] of postSource(p.slug).matchAll(/\/use-cases\/#([\w-]+)/g)) {
+      assert.ok(page.includes(`id="${id}"`), `${p.slug} links /use-cases/#${id}, which app/use-cases/page.tsx has no id for`);
+    }
+  }
+});
+
+test('the how-to post’s worked examples are use cases that exist', () => {
+  // app/blog/split-upi-payment-above-2000/page.mdx names a ₹4,200 kirana bill and ₹5,500 tuition fees
+  // and sends readers to /use-cases/ for them.
+  for (const amount of [4200, 5500]) {
+    assert.ok(useCases.some((u) => u.amount === amount), `no use case for ₹${amount}`);
+  }
+});
+
+test('the home page’s three latest posts include the ₹2000 check post', () => {
+  // Home lists posts.slice(0, 3), and until the FAQ links it (SEO-05) that list is home's only link to
+  // the check post. Keep it in the first three, or add another link from home before moving it down.
+  assert.ok(
+    posts.slice(0, 3).some((p) => p.slug === 'upi-2000-threshold-what-to-check'),
+    'upi-2000-threshold-what-to-check is not among the first three posts',
+  );
 });

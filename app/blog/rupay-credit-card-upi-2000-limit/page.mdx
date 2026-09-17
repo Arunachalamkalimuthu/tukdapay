@@ -1,0 +1,60 @@
+import { postLayout, postMetadata } from '@/components/blog/PostShell'
+
+export const metadata = postMetadata('rupay-credit-card-upi-2000-limit')
+
+export default postLayout('rupay-credit-card-upi-2000-limit')
+
+<Lede>You pay a shop with your RuPay credit card on UPI, and the app says a ₹2,000 limit has been reached for that receiver. The quickest thing to try is paying from your bank account instead. Here's what to check, and what else you can do.</Lede>
+
+<Callout>
+This page doesn't give limit figures: they differ from card to card and can change. The links below go to the people who set them.
+</Callout>
+
+## What the message is telling you
+
+People see this message when they pay with a RuPay credit card on UPI, and payments from a credit card have limits of their own.
+
+RuPay's own [FAQs about its credit cards on UPI](https://www.rupay.co.in/rupay-credit-card-on-upi) say transactions are subject to "the available credit limit on the card and any transaction limits set by the issuer bank or the customer". So the limit can come from your credit limit, from your bank, or from a UPI limit you set on the card yourself.
+
+Kiwi's page (below) describes a check that adds up smaller credit card payments to small shops, so a message like this can mean earlier payments count too, not just this one.
+
+## Per payment or per day?
+
+This decides what you can do.
+
+- **A per-payment limit** caps each single payment. A smaller payment can still go through.
+- **A per-day or rolling limit** adds up what you've paid over a period, sometimes only to certain kinds of shop. Once it's reached, smaller payments fail too, until the period ends.
+
+Kiwi, an app for RuPay credit cards, describes one check of the second kind on [its help page](https://gokiwi.in/npci-transaction-limit-check/): it adds up credit card payments to small merchants over a rolling 24 hours, and its worked examples show smaller payments failing because earlier ones added up. The page also says which payments the check counts and which it doesn't.
+
+## Where card issuers publish their terms
+
+Card issuers can set their own limits for credit card payments on UPI. [Paytm's page on failed RuPay credit card UPI payments](https://paytm.com/support/upi/troubleshooting-failed-rupay-credit-card-upi-payments) lists an issuer's limit, and shops that don't accept credit cards on UPI, among the reasons these payments fail. Some issuers' pages:
+
+- [HDFC Bank: RuPay credit card on UPI](https://www.hdfc.bank.in/rupay-cc-on-upi), with FAQs on the page
+- [Axis Bank: credit card on UPI](https://www.axis.bank.in/payments/payment-methods/credit-card-on-upi), FAQs under *Transactional*, question 10
+- [ICICI Bank: UPI transaction limit for RuPay credit cards](https://www.icici.bank.in/personal-banking/blogs/card/credit-card/transaction-limit-for-rupay-credit-card)
+
+For any other card, RuPay's FAQs point you to your bank: "check your bank's mobile app, internet banking portal, or customer care".
+
+## What you can do now
+
+- **Pay from your bank account instead.** Choose your bank account in the UPI app rather than the card. Kiwi's page suggests the same.
+- **Try again later**, which Kiwi's page also suggests. Your issuer can tell you about limits it sets itself.
+- **Check that the shop accepts credit cards on UPI.** RuPay's FAQs note that if a merchant doesn't support RuPay credit cards on UPI, you can't pay them with one.
+- **Ask about charges separately.** NPCI's September 2026 FAQs on the merchant discount rate ([PDF](https://www.npci.org.in/uploads/FA_Qs_Merchant_Discount_Rate_MDR_on_Select_UPI_P2_M_Transactions_58dba1d39e.pdf)) deal with credit-linked UPI payments on their own: they "operate under separate credit product rules" (question 36). For fees on card payments, Paytm's page says to check your card issuer's fee structure. For UPI payments above ₹2,000 in general, here's [how to check what applies](/blog/upi-2000-threshold-what-to-check/).
+
+## When paying in parts is, and isn't, an option
+
+Paying the bill as a few smaller UPI payments can only help when both of these are true:
+
+1. The limit is on a **single payment**, not a total for the day or for that receiver.
+2. **The shop agrees** to take the bill in parts.
+
+It isn't an option when the limit adds up what you pay: every part counts towards the same total. It also won't help if the shop doesn't accept credit cards on UPI at all.
+
+In Kiwi's examples it's the smaller payments that the check adds up, so splitting a card payment into smaller parts runs into it, not around it.
+
+If both conditions hold, [TukdaPay's UPI payment splitter](/) works out the parts and opens each one in your UPI app. Only pay UPI IDs you trust, and check the name your app shows before each PIN.
+
+<Cta href="/blog/cant-pay-more-than-2000-upi/">More reasons a UPI payment won't go through</Cta>
