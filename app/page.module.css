@@ -60,7 +60,10 @@
   /*
    * Before a plan, How it works sits beside the form and three sections are left below: the long
    * Questions list spans two rows on the right, so From the blog tucks under Why instead of
-   * leaving a hole.
+   * leaving a hole. A spanning item's extra height is shared between the rows it spans, so the
+   * Why row is held to its own content (minmax(min-content, 0) can't grow) and the blog row takes
+   * the rest of the Questions list.
    */
+  .home:not(:has(.stepsBelow)) { grid-auto-rows: minmax(min-content, 0) auto; }
   .home:not(:has(.stepsBelow)) .faq { grid-row: span 2; }
 }
