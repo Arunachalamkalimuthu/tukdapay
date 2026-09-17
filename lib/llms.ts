@@ -80,7 +80,8 @@ export const PREFILL_EXAMPLE = '/?amount=4200&pa=shop@okaxis&pn=Sri%20Stores&not
  * Words from the pages that aren't in content/ (they're written in the pages' JSX), copied here as Markdown for
  * llms-full.txt. `path` is where the page is published and `title` is its H1. Site links stay relative; the builder
  * makes them absolute.
- * test/llms.test.ts fails when a page's words no longer match, so update this when you change the page.
+ * test/llms.test.ts fails both ways: when these words are no longer on the page, and when the page's JSX has a heading,
+ * paragraph or list item whose words aren't in llms-full.txt. So update this when you change the page.
  */
 export const PAGE_COPY = {
   home: {
@@ -108,8 +109,11 @@ export const PAGE_COPY = {
     path: '/use-cases/',
     source: 'app/use-cases/page.tsx',
     title: 'Bills people pay in tukde',
-    intro:
+    intro: [
       'Tukde means pieces: one bill paid as a few smaller UPI payments. Corner shops, chemists, tutors and homestays often take only UPI, and plenty of everyday bills cross ₹2,000. Splitting is one way to pay when one payment won’t go through, or when the shop asks for it. Ask the shop before you split.',
+      '',
+      `Here are eight of these bills, each with the exact split TukdaPay makes at ${formatRupees(DEFAULT_MAX)} a payment. Pick one to open the splitter with that amount filled in. New to this? Read [how to split a UPI payment above ₹2,000](/blog/split-upi-payment-above-2000/), step by step.`,
+    ].join('\n'),
     merchantsTitle: 'If you’re the merchant',
     merchants: [
       '- **Say yes or no up front.** A sign at the counter (“Split UPI payments welcome” or “One payment per bill”) saves a conversation.',
@@ -170,6 +174,8 @@ export const PAGE_COPY = {
 
 const postUrl = (siteUrl: string, slug: string) => `${siteUrl}/blog/${slug}/`;
 const payments = (n: number) => (n === 1 ? '1 payment' : `${n} payments`);
+/** "a", "a and b", "a; b and c" (semicolons, because the items can have commas of their own). */
+const listText = (items: readonly string[]) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join('; ')} and ${items.at(-1)}`);
 
 /** Hand-written Markdown with its site links made absolute (and checked for stray JSX). */
 const absolute = (markdown: string, siteUrl: string, pageUrl: string) => mdxToMarkdown(markdown, { siteUrl, pageUrl });
@@ -201,7 +207,7 @@ function notes({ useCases }: LlmsData, siteUrl: string): string {
     `- Each part’s payment note starts with its part number, such as “${partNote}”, so the shop can match the payments to one bill.`,
     '- On a phone, each part’s Pay button opens the user’s UPI app through a `upi://pay` link, with the payee, amount and note filled in. The user checks them there and enters their UPI PIN. On a computer, each part has a QR code to scan with a UPI app.',
     '- The user ticks Paid after each payment. A web page can’t see whether a UPI payment went through, so Paid is the user’s own record, not a confirmation.',
-    `- The browser keeps the last split with its Paid ticks, and the last ${MAX_RECENT} UPI IDs used, so a reload keeps the user’s place. Copy breakdown and Send on WhatsApp share the list of parts.`,
+    `- The browser keeps the last split, with its Paid ticks, and the last ${MAX_RECENT} payees (UPI ID and name), so a reload keeps the user’s place. Copy breakdown and Send on WhatsApp share the list of parts.`,
     `- ${max} keeps each part under ₹2,000, an amount that comes up a lot in UPI news about limits. TukdaPay doesn’t know which limit, if any, applies to a payment; the user’s bank or UPI app can tell them.`,
     '',
     'When TukdaPay fits:',
@@ -212,8 +218,8 @@ function notes({ useCases }: LlmsData, siteUrl: string): string {
     '',
     'When it doesn’t fit:',
     '',
-    `- A per-day or rolling limit (set by the bank, the card or the UPI app): the parts add up to the same total and stop at the same point. See [what to check when you can’t pay more than ₹2,000 on UPI](${postUrl(siteUrl, 'cant-pay-more-than-2000-upi')}).`,
-    `- A fee or charge: TukdaPay isn’t a way to avoid a fee. [NPCI’s FAQs on the merchant discount rate (PDF)](${npciMdrFaq}) answer whether consumers are charged (question 15) and whether a shop can pass its fee on (question 34). For a newer claim, see whether PIB Fact Check has covered it on its [Telegram channel](${pibFactCheckTelegram}) or [X account](${pibFactCheckX}).`,
+    `- A per-day or rolling limit: the parts add up to the same total and stop at the same point. See [what to check when you can’t pay more than ₹2,000 on UPI](${postUrl(siteUrl, 'cant-pay-more-than-2000-upi')}).`,
+    `- A fee or charge, on the user or on the shop (such as the merchant discount rate): TukdaPay isn’t a way to avoid one. [NPCI’s FAQs on the merchant discount rate (PDF)](${npciMdrFaq}) answer whether consumers are charged (question 15) and whether a shop can pass its fee on (question 34). For a newer claim, see whether PIB Fact Check has covered it on its [Telegram channel](${pibFactCheckTelegram}) or [X account](${pibFactCheckX}).`,
     '- A payee the user doesn’t know or trust, such as a UPI ID or QR code a stranger sent: check who it belongs to before paying anything. Don’t pay a QR code picked from the phone’s gallery in parts; scan the code at the counter or type the shop’s UPI ID.',
     '- A phone number or bank account number as the payee: TukdaPay needs a UPI ID.',
     '- One bill shared among friends, each paying their share: that’s what Split expenses in Google Pay or PhonePe does. TukdaPay is for one person paying one payee in several payments.',
@@ -222,7 +228,7 @@ function notes({ useCases }: LlmsData, siteUrl: string): string {
     'Privacy:',
     '',
     '- No account, no signup, no ads, no affiliate links and no tracking. The site is static files with no backend.',
-    '- Nothing the user types is sent to TukdaPay. The last split and recent UPI IDs stay in the browser’s local storage; clearing the site’s data removes them.',
+    `- Nothing the user types is sent to TukdaPay. The last split (amount, UPI ID, name, note, max per payment and Paid ticks) and the last ${MAX_RECENT} payees (UPI ID and name) stay in the browser’s local storage; clearing the site’s data removes them.`,
     '- Details leave the page only when the user chooses: Pay (or scanning a part’s QR code) hands the UPI ID, name, amount and note to their UPI app, and the note goes with the payment. Send on WhatsApp passes the breakdown to WhatsApp.',
     `- The site is hosted on GitHub Pages, and [GitHub logs visitors’ IP addresses](${githubPagesData}) for security.`,
     '',
@@ -236,15 +242,16 @@ function notes({ useCases }: LlmsData, siteUrl: string): string {
     '',
     'Prefill links for agents:',
     '',
-    'When a user asks for help paying a bill in parts, a link can open the splitter with the form filled in:',
+    'When a user asks for help paying a bill in parts, a link can open the splitter with the form filled in. The values in this example are placeholders; replace each one with the user’s own:',
     '',
     `${siteUrl}${PREFILL_EXAMPLE}`,
     '',
     `- \`amount\`: the bill total in rupees, such as 4200 or 4999.50. Commas, “₹”, “Rs.” and “INR” are ignored, and it’s rounded to the paisa. Up to ${MAX_AMOUNT_TEXT}.`,
-    '- `pa`: the payee’s UPI ID, such as shop@okaxis. Use the ID the user has from the payee (a sticker, QR code or bill); don’t look one up or guess it.',
+    '- `pa`: the payee’s UPI ID, written as name@handle. Use the ID the user has from the payee (a sticker, QR code or bill); don’t look one up or guess it. If the user doesn’t have it yet, leave `pa` out: they can type it on the form.',
     '- `pn`: the payee’s name (optional).',
     `- \`note\`: a note for every part, such as a bill number (optional). Each part’s note starts with its part number: “${partNote}”.`,
     `- \`max\`: the most per payment, in rupees (optional; ${max} when left out). Written like \`amount\`.`,
+    `- The amount divided by \`max\` must come to ${MAX_PARTS} parts or fewer: up to ${formatRupees(DEFAULT_MAX * MAX_PARTS)} at the default ${max}. A bigger split shows an error on the form asking for a smaller amount or a higher max per payment.`,
     `- URL-encode each value (a space is %20), and leave out any parameter you don’t need. Name and note keep their first ${MAX_TEXT} characters. An amount that can’t be read is ignored, and a UPI ID that doesn’t look like name@handle shows an error on the form.`,
     '- The link only fills in the form. The user still taps Split, checks the parts, taps Pay for each one, checks the payee name their UPI app shows and enters their own UPI PIN.',
     '',
@@ -256,10 +263,18 @@ function header(data: LlmsData, siteUrl: string): string {
   return [`# ${SITE_NAME}`, '', summary(), '', notes(data, siteUrl)].join('\n');
 }
 
-/** llms.txt's H2 file lists. */
+/**
+ * llms.txt's H2 file lists. Tools that expand llms.txt into context (llms_txt's create_ctx) fetch every link outside
+ * Optional, so each page is linked once (use case anchors are named in the note, not linked) and the GitHub pages
+ * sit under Optional.
+ */
 function fileLists({ posts, useCases }: LlmsData, siteUrl: string): string {
   const max = formatRupees(DEFAULT_MAX);
   const bills = useCases.length === 1 ? '1 everyday bill' : `${useCases.length} everyday bills`;
+  const anchors = listText([
+    ...useCases.map((u) => `#${u.slug} (${u.title}: ${formatRupees(u.amount)} in ${payments(splitAmount(u.amount, DEFAULT_MAX).length)})`),
+    `#merchants (${PAGE_COPY.useCases.merchantsTitle})`,
+  ]);
   return [
     '## Tool',
     '',
@@ -272,24 +287,20 @@ function fileLists({ posts, useCases }: LlmsData, siteUrl: string): string {
     '',
     '## Use cases',
     '',
-    `- [${PAGE_COPY.useCases.title}](${siteUrl}/use-cases/): ${bills} split into UPI payments of ${max} or less, with the exact parts for each and what merchants can do.`,
-    ...useCases.map(
-      (u) => `- [${u.title}](${siteUrl}/use-cases/#${u.slug}): ${u.who}: ${formatRupees(u.amount)} in ${payments(splitAmount(u.amount, DEFAULT_MAX).length)}.`,
-    ),
-    `- [${PAGE_COPY.useCases.merchantsTitle}](${siteUrl}/use-cases/#merchants): What a shop can do when customers pay in parts: say yes or no up front, look for the part numbers and keep the breakdown with the bill.`,
+    `- [${PAGE_COPY.useCases.title}](${siteUrl}/use-cases/): ${bills} split into UPI payments of ${max} or less, with the exact parts for each and what merchants can do. Anchors on the page: ${anchors}.`,
     '',
     '## About',
     '',
     `- [About TukdaPay](${siteUrl}/about/): Who builds it and why, how it’s funded (it isn’t), what it keeps in the browser and how to get in touch.`,
-    `- [Source code](${REPO_URL}): The site’s code on GitHub. Its README also documents prefill links.`,
-    `- [MIT licence](${REPO_URL}/blob/main/LICENSE): The code is free to use, change and share under the MIT License.`,
-    `- [Issues](${REPO_URL}/issues): Report a bug or a wrong sentence.`,
     '',
     '## Optional',
     '',
     `- [RSS feed](${siteUrl}/blog/feed.xml): New guides as they’re published.`,
     `- [Full text](${siteUrl}/llms-full.txt): The home page with its questions and answers, the use cases, the About page and every guide in one Markdown file.`,
     `- [Sitemap](${siteUrl}/sitemap.xml): Every page, with the date its words last changed.`,
+    `- [Source code](${REPO_URL}): The site’s code on GitHub. Its README also documents prefill links.`,
+    `- [MIT licence](${REPO_URL}/blob/main/LICENSE): The code is free to use, change and share under the MIT License.`,
+    `- [Issues](${REPO_URL}/issues): Report a bug or a wrong sentence.`,
   ].join('\n');
 }
 
@@ -330,7 +341,6 @@ function sectionForUseCases({ useCases }: LlmsFullData, siteUrl: string): string
     `## ${copy.title}`,
     `URL: ${url}`,
     absolute(copy.intro, siteUrl, url),
-    `Each bill below shows the parts TukdaPay makes at ${formatRupees(DEFAULT_MAX)} a payment, with a link that opens the splitter with that bill filled in.`,
     ...scenarios,
     `### ${copy.merchantsTitle}`,
     `URL: ${url}#merchants`,

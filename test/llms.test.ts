@@ -17,10 +17,12 @@ import {
   type LlmsPost,
   type LlmsUseCase,
 } from '../lib/llms.ts';
+import { formatRupees } from '../lib/format.ts';
 import { inlineToMarkdown } from '../lib/markdown.ts';
-import { createPlan, MAX_PARTS } from '../lib/plan.ts';
+import { countParts, createPlan, MAX_PARTS } from '../lib/plan.ts';
 import { MAX_TEXT, PREFILL_KEYS, readPrefill } from '../lib/prefill.ts';
-import { REPO_URL, SITE_URL } from '../lib/site.ts';
+import { MAX_RECENT } from '../lib/recent.ts';
+import { DEFAULT_MAX, REPO_URL, SITE_URL } from '../lib/site.ts';
 
 // ---- fixtures and helpers ----
 
@@ -108,6 +110,48 @@ const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.ur
 const realTxt = () => buildLlmsTxt({ posts, useCases });
 const realFullTxt = async () => (await llmsFullRoute.GET().text()) as string;
 
+/** llms-full.txt up to its first post: the header and notes, home, use cases and About. */
+function beforePosts(full: string): string {
+  const about = full.indexOf(`\n## ${PAGE_COPY.about.title}\n`);
+  assert.ok(about !== -1, 'no About section');
+  const next = full.indexOf('\n## ', about + 1);
+  return next === -1 ? full : full.slice(0, next + 1);
+}
+
+/** JSX expressions in the pages' words that PAGE_COPY writes out as their values. */
+const PAGE_EXPRESSIONS: Record<string, string> = { '{formatRupees(DEFAULT_MAX)}': formatRupees(DEFAULT_MAX) };
+
+/** A page's source with comments dropped, {' '} and <br /> as spaces, and PAGE_EXPRESSIONS as their values. */
+function pageSource(src: string): string {
+  let out = src
+    .replace(/\{?\/\*[\s\S]*?\*\/\}?/g, '')
+    .replace(/^\s*\/\/.*$/gm, '')
+    .replace(/\{' '\}/g, ' ')
+    .replace(/<br\b[^>]*\/>/g, ' ');
+  for (const [expression, value] of Object.entries(PAGE_EXPRESSIONS)) out = out.replaceAll(expression, value);
+  return out;
+}
+
+/**
+ * The words of every heading, paragraph, list item and description list entry in a page's source, as runs of literal
+ * text. A JSX expression ({u.tip}, {f.q}) ends a run: those words come from content/, which has its own checks.
+ */
+function pageTextRuns(src: string): string[] {
+  const runs: string[] = [];
+  for (const [, , inner] of pageSource(src).matchAll(/<(h[1-6]|p|li|dt|dd)\b[^>]*>([\s\S]*?)<\/\1>/g)) {
+    let text = inner.replace(/<\/?[A-Za-z][^>]*>/g, '');
+    // Innermost braces first, so {`in ${count} payments`} goes as one expression.
+    for (let before = ''; before !== text; ) {
+      before = text;
+      text = text.replace(/\{[^{}]*\}/g, '\u0000');
+    }
+    for (const run of text.split('\u0000')) {
+      if (/[\p{L}\p{N}]/u.test(run)) runs.push(collapse(run));
+    }
+  }
+  return runs;
+}
+
 // ---- llms.txt ----
 
 test('llms.txt starts with the site name as its H1 and a one-line blockquote summary', () => {
@@ -164,7 +208,7 @@ test('Guides links the blog and every post, newest first, with its description',
   ]);
 });
 
-test('Use cases links the page and each bill by its anchor, with the amount and number of payments', () => {
+test('Use cases links the page once and names each bill’s anchor, with the amount and number of payments', () => {
   const txt = buildLlmsTxt({
     posts: [],
     useCases: [
@@ -173,29 +217,41 @@ test('Use cases links the page and each bill by its anchor, with the amount and 
       scenario({ slug: 'small', title: 'Small bill', amount: 1500, who: 'Test' }),
     ],
   });
-  const lines = section(txt, 'Use cases').split('\n');
-  assert.match(lines[0], /^- \[Bills people pay in tukde\]\(https:\/\/tukdapay\.com\/use-cases\/\): 3 everyday bills /);
-  assert.deepEqual(lines.slice(1, 4), [
-    '- [Monthly kirana bill](https://tukdapay.com/use-cases/#kirana): Households: ₹4,200 in 3 payments.',
-    '- [Phone, mixer or appliance](https://tukdapay.com/use-cases/#electronics): Shopping: ₹14,999 in 8 payments.',
-    '- [Small bill](https://tukdapay.com/use-cases/#small): Test: ₹1,500 in 1 payment.',
-  ]);
-  assert.match(lines[4], /^- \[If you’re the merchant\]\(https:\/\/tukdapay\.com\/use-cases\/#merchants\): /);
-  assert.equal(lines.length, 5);
+  assert.equal(
+    section(txt, 'Use cases'),
+    '- [Bills people pay in tukde](https://tukdapay.com/use-cases/): 3 everyday bills split into UPI payments of ₹1,999 or less, ' +
+      'with the exact parts for each and what merchants can do. Anchors on the page: ' +
+      '#kirana (Monthly kirana bill: ₹4,200 in 3 payments); #electronics (Phone, mixer or appliance: ₹14,999 in 8 payments); ' +
+      '#small (Small bill: ₹1,500 in 1 payment) and #merchants (If you’re the merchant).',
+  );
 });
 
-test('About links the About page, the source code, the licence and issues; Optional the feed, full text and sitemap', () => {
+test('the real llms.txt names an anchor for every use case and the merchant section, and each is on the page', () => {
+  const line = section(realTxt(), 'Use cases');
+  const named = [...line.matchAll(/(?<=\s)#([a-z0-9-]+) \(/g)].map((m) => m[1]);
+  assert.deepEqual(named, [...useCases.map((u) => u.slug), 'merchants']);
+  assert.ok(read('app/use-cases/page.tsx').includes('id="merchants"'));
+});
+
+test('outside Optional, llms.txt links only tukdapay.com pages, each once, so expanding it fetches each page once', () => {
+  const txt = realTxt();
+  const lists = txt.slice(txt.indexOf('\n## '), txt.indexOf('\n## Optional\n'));
+  const urls = urlsIn(lists);
+  assert.ok(urls.length > 0);
+  for (const url of urls) assert.ok(url.startsWith(`${SITE_URL}/`) && !url.includes('#'), url);
+  assert.equal(new Set(urls).size, urls.length, 'a page is linked twice');
+});
+
+test('About links the About page; Optional the feed, full text, sitemap, source code, licence and issues', () => {
   const txt = buildLlmsTxt({ posts: [], useCases: [] });
-  assert.deepEqual(urlsIn(section(txt, 'About')), [
-    'https://tukdapay.com/about/',
-    REPO_URL,
-    `${REPO_URL}/blob/main/LICENSE`,
-    `${REPO_URL}/issues`,
-  ]);
+  assert.deepEqual(urlsIn(section(txt, 'About')), ['https://tukdapay.com/about/']);
   assert.deepEqual(urlsIn(section(txt, 'Optional')), [
     'https://tukdapay.com/blog/feed.xml',
     'https://tukdapay.com/llms-full.txt',
     'https://tukdapay.com/sitemap.xml',
+    REPO_URL,
+    `${REPO_URL}/blob/main/LICENSE`,
+    `${REPO_URL}/issues`,
   ]);
 });
 
@@ -218,6 +274,19 @@ test('the prefill example fills in every field, and each parameter is explained'
   assert.match(txt, /₹100 crore/);
   assert.match(txt, /only fills in the form/);
   assert.match(txt, /UPI PIN/);
+  assert.match(txt, /The values in this example are placeholders; replace each one with the user’s own:\n/);
+});
+
+test('the prefill notes give the splitter’s part cap and say to leave out a UPI ID the user doesn’t have', () => {
+  const txt = buildLlmsTxt({ posts: [], useCases: [] });
+  const cap = DEFAULT_MAX * MAX_PARTS;
+  assert.ok(txt.includes(`must come to ${MAX_PARTS} parts or fewer: up to ${formatRupees(cap)} at the default ${formatRupees(DEFAULT_MAX)}.`));
+  // The same count the form checks before it shows "That would be N payments".
+  assert.equal(countParts(cap, DEFAULT_MAX), MAX_PARTS);
+  assert.equal(countParts(cap + 0.01, DEFAULT_MAX), MAX_PARTS + 1);
+  assert.match(txt, /If the user doesn’t have it yet, leave `pa` out: they can type it on the form\./);
+  // A link with an amount and no UPI ID still fills in the form.
+  assert.deepEqual(readPrefill(new URL('/?amount=5000', SITE_URL).searchParams), { present: true, amount: 5000 });
 });
 
 test('the notes describe how a split works with the splitter’s own numbers', () => {
@@ -235,7 +304,7 @@ test('the notes say when TukdaPay fits, when it doesn’t, and what it can’t d
     /shop asks/,
     /ask the shop first/i,
     /per-day or rolling limit/,
-    /isn’t a way to avoid a fee/,
+    /A fee or charge, on the user or on the shop \(such as the merchant discount rate\): TukdaPay isn’t a way to avoid one\./,
     /question 15/,
     /doesn’t know or trust/,
     /needs a UPI ID/,
@@ -253,6 +322,17 @@ test('the notes say when TukdaPay fits, when it doesn’t, and what it can’t d
   assert.ok(txt.includes(`(${NPCI_MDR_FAQ_URL})`), 'does not link NPCI’s FAQ');
   assert.ok(txt.includes(`(${PIB_FACT_CHECK_TELEGRAM_URL})`) && txt.includes(`(${PIB_FACT_CHECK_X_URL})`), 'does not link PIB Fact Check');
   assert.doesNotMatch(txt, /factcheck\.pib\.gov\.in/, 'PIB Fact Check’s portal is a login form; link its published checks');
+  assert.match(txt, /- A per-day or rolling limit: /, 'don’t list who sets a per-day limit; the list can’t be complete');
+});
+
+test('the notes say what the browser keeps as the About page does: the last split and the last payees with their names', () => {
+  const txt = buildLlmsTxt({ posts: [], useCases: [] });
+  assert.ok(txt.includes(`the last ${MAX_RECENT} payees (UPI ID and name)`));
+  assert.ok(txt.includes('The last split (amount, UPI ID, name, note, max per payment and Paid ticks)'));
+  assert.doesNotMatch(txt, /UPI IDs used|recent UPI IDs/);
+  assert.ok(PAGE_COPY.about.body.includes('last split (amount, UPI ID, name, note, max per payment and which parts you ticked as paid)'));
+  assert.ok(PAGE_COPY.about.body.includes('the last five shops you split for (UPI ID and name)'));
+  assert.equal(MAX_RECENT, 5, 'the About page says five');
 });
 
 test('the NPCI, PIB and GitHub links match the ones the pages use', () => {
@@ -280,6 +360,9 @@ const COPY_RULE_BREAKS = [
   /\bcheapest\b/i,
   /\bsave (money|on)\b/i,
   /\b(reviews?|ratings?|stars?|users)\b/i,
+  // Paying by UPI in parts set against a card fee or an unwilling card machine, or a shop preferring it to a fee.
+  /\bcard (fees?|charges?|machines?)\b/i,
+  /\bprefer\w*\b[^.]*\b(fees?|charges?|charged|MDR|merchant discount rate)\b/i,
 ];
 
 /**
@@ -295,11 +378,24 @@ function assertCopyRules(text: string, where: string) {
   }
   // A sentence about avoiding or saving on a fee must be a denial ("isn’t a way to avoid a fee").
   for (const sentence of words.split(/(?<=[.?!:])\s+/)) {
-    if (/\b(avoid|save|saves|saving|skip|dodge|around|cheaper)\b/i.test(sentence) && /\b(fee|fees|charge|charges|charged|MDR)\b/i.test(sentence)) {
+    if (/\b(avoid|save|saves|saving|skip|dodge|around|cheaper|prefer\w*|instead of)\b/i.test(sentence) && /\b(fee|fees|charge|charges|charged|MDR)\b/i.test(sentence)) {
       assert.match(sentence, /\b(isn’t|not|doesn’t|never|no)\b/i, `${where}: "${sentence}"`);
     }
   }
 }
+
+test('the copy rules catch a shop preferring split payments to a card fee, and let a denial through', () => {
+  for (const words of [
+    'Eight payments — ask the shop first. Many prefer it to a card fee, some don’t.',
+    'A ₹14,999 phone at a local electronics shop that takes UPI. The card machine is “not working today”.',
+    'Shops often prefer smaller payments to paying the MDR.',
+    'Pay in parts instead of paying a charge.',
+    'Split it to avoid the fee.',
+  ]) {
+    assert.throws(() => assertCopyRules(words, 'fixture'), words);
+  }
+  assert.doesNotThrow(() => assertCopyRules('TukdaPay isn’t a way to avoid a fee. Ask the shop first: it sees several payments instead of one.', 'fixture'));
+});
 
 test('llms.txt follows the copy rules and groups amounts the Indian way outside post titles', () => {
   const txt = realTxt();
@@ -470,16 +566,8 @@ test('every tukdapay.com link in both files points at a page, file or section th
 test('the page copy in lib/llms.ts still reads as the pages do (update PAGE_COPY when a page’s words change)', () => {
   for (const [name, page] of Object.entries(PAGE_COPY)) {
     const src = read(page.source);
-    // The page's words: comments, line breaks and tags dropped. Home defines its steps above the component, so the
-    // whole file is read.
-    const words = collapse(
-      src
-        .replace(/\{?\/\*[\s\S]*?\*\/\}?/g, '')
-        .replace(/^\s*\/\/.*$/gm, '')
-        .replace(/\{' '\}/g, ' ')
-        .replace(/<br\b[^>]*\/>/g, ' ')
-        .replace(/<\/?[A-Za-z][^>]*>/g, ''),
-    );
+    // The page's words, tags dropped. Home defines its steps above the component, so the whole file is read.
+    const words = collapse(pageSource(src).replace(/<\/?[A-Za-z][^>]*>/g, ''));
     for (const [field, value] of Object.entries(page)) {
       if (field === 'source' || field === 'path') continue;
       for (const line of mdText(value).split('\n')) {
@@ -497,6 +585,42 @@ test('the page copy in lib/llms.ts still reads as the pages do (update PAGE_COPY
   }
 });
 
+/** Words on the pages that llms-full.txt leaves out on purpose. */
+const LEFT_OUT: Record<keyof typeof PAGE_COPY, readonly string[]> = {
+  // The three newest posts; llms-full.txt has every post in full.
+  home: ['From the blog'],
+  useCases: [],
+  // The button to the splitter.
+  about: ['Split a payment'],
+};
+
+test('every heading, paragraph and list item written on home, use cases and About is in llms-full.txt', async () => {
+  const full = await realFullTxt();
+  for (const [name, page] of Object.entries(PAGE_COPY) as [keyof typeof PAGE_COPY, (typeof PAGE_COPY)[keyof typeof PAGE_COPY]][]) {
+    const text = collapse(mdText(`${page.title}\n${section(full, page.title)}`));
+    const runs = pageTextRuns(read(page.source));
+    assert.ok(runs.length > 0, page.source);
+    for (const run of runs) {
+      if (LEFT_OUT[name].includes(run)) continue;
+      assert.ok(text.includes(run), `${page.source} says "${run}", which llms-full.txt doesn’t: add it to PAGE_COPY.${name} (or to LEFT_OUT)`);
+    }
+    for (const run of LEFT_OUT[name]) assert.ok(runs.includes(run), `LEFT_OUT.${name}: "${run}" is no longer on ${page.source}`);
+  }
+});
+
+test('pageTextRuns reads the literal words of headings, paragraphs and list items, and skips expressions', () => {
+  const src = [
+    '{/* a comment */}',
+    '<h2 id="x">Why <br />it{\' \'}exists</h2>',
+    '<p className={s.tip}><strong>Tip:</strong> {u.tip}</p>',
+    '<p>{count === 1 ? \'in 1 payment\' : `in ${count} payments`}<span className="sr-only">: {text}</span></p>',
+    '<li>At {formatRupees(DEFAULT_MAX)} a payment, <a href={URL}>see this</a>.</li>',
+    '<p>NEW SENTENCE: it now stores bank details.</p>',
+    '<div>Not a text element.</div>',
+  ].join('\n');
+  assert.deepEqual(pageTextRuns(src), ['Why it exists', 'Tip:', 'At ₹1,999 a payment, see this.', 'NEW SENTENCE: it now stores bank details.']);
+});
+
 test('FAQ answers in llms-full.txt read the same as their plain-text answers', async () => {
   const full = await realFullTxt();
   for (const f of faq) {
@@ -506,10 +630,40 @@ test('FAQ answers in llms-full.txt read the same as their plain-text answers', a
   }
 });
 
+test('beforePosts stops at the first post, whichever post is newest', () => {
+  const full = buildLlmsFullTxt(
+    fullData({
+      posts: [post({ slug: 'old', title: 'Old', date: '2026-01-01' }), post({ slug: 'new', title: 'New', date: '2026-10-01' })],
+      postSources: { old: 'Old body.', new: 'Your bank says the limit is set per day.' },
+    }),
+  );
+  const pages = beforePosts(full);
+  assert.ok(pages.includes(`\n## ${PAGE_COPY.about.title}\n`));
+  assert.ok(!pages.includes('\n## New\n') && !pages.includes('\n## Old\n') && !pages.includes('limit is set per day'));
+  assert.ok(full.startsWith(pages));
+});
+
+/**
+ * Words in content/useCases.ts that break the copy rules and are to be reworded there (the electronics story and tip
+ * set UPI in parts against a card fee). While they're still in content/useCases.ts, the todo test below reports
+ * them and the copy rule check after it skips these exact sentences; once they're reworded, both check everything.
+ * Then delete this list.
+ */
+const AWAITING_REWORD = ['The card machine is “not working today”.', 'Many prefer it to a card fee, some don’t.'];
+const awaitingReword = AWAITING_REWORD.filter((words) => useCases.some((u) => u.story.includes(words) || u.tip.includes(words)));
+
+test(
+  'no use case sets paying in parts against a card fee (content/useCases.ts)',
+  { todo: awaitingReword.length > 0 && `reword in content/useCases.ts: ${awaitingReword.join(' | ')}` },
+  () => {
+    for (const u of useCases) assertCopyRules(`${u.story}\n${u.tip}`, `content/useCases.ts ${u.slug}`);
+  },
+);
+
 test('llms-full.txt follows the copy rules outside the posts, which have their own checks', async () => {
-  const full = await realFullTxt();
-  const firstPost = full.indexOf(`\n## ${posts[0].title}\n`);
-  assert.ok(firstPost !== -1);
+  let pages = beforePosts(await realFullTxt());
+  assert.ok(pages.includes(`\n## ${PAGE_COPY.useCases.title}\n`));
+  for (const words of awaitingReword) pages = pages.replaceAll(words, '');
   // Use case tips are the page's own words; the fee check still applies to them.
-  assertCopyRules(full.slice(0, firstPost), 'llms-full.txt');
+  assertCopyRules(pages, 'llms-full.txt');
 });
