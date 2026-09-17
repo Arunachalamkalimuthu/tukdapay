@@ -1,12 +1,24 @@
 import { JsonLd } from '@/components/JsonLd';
 import { PostList } from '@/components/blog/PostList';
+import { lastModified } from '@/components/blog/postData';
 import { postPath, posts } from '@/content/posts';
 import { pageMetadata } from '@/lib/metadata';
-import { FEED_DESCRIPTION, FEED_TITLE, newestFirst } from '@/lib/rss';
-import { SITE_NAME, SITE_URL } from '@/lib/site';
+import { ogCards, ogImage } from '@/lib/og';
+import { FEED_TITLE, newestFirst } from '@/lib/rss';
+import { PUBLISHER, istDateTime } from '@/lib/schema';
+import { SITE_URL } from '@/lib/site';
 import s from './page.module.css';
 
-export const metadata = pageMetadata({ title: 'Blog', description: FEED_DESCRIPTION, path: '/blog/' });
+// ₹2000 without a comma in the title and description, the way people search for it; the page itself groups it.
+const DESCRIPTION =
+  'Plain-language UPI guides: what to check when a payment above ₹2000 won’t go through, how to pay in parts, where the rules are published, and upi://pay links.';
+
+export const metadata = pageMetadata({
+  title: 'UPI guides: payments above ₹2000 and upi:// links',
+  description: DESCRIPTION,
+  path: '/blog/',
+  image: ogImage(ogCards(posts).find((c) => c.key === 'blog')!),
+});
 
 export default function BlogIndexPage() {
   const list = newestFirst(posts);
@@ -17,23 +29,27 @@ export default function BlogIndexPage() {
           '@context': 'https://schema.org',
           '@type': 'Blog',
           name: FEED_TITLE,
-          description: FEED_DESCRIPTION,
+          description: DESCRIPTION,
           url: `${SITE_URL}/blog/`,
           inLanguage: 'en-IN',
-          publisher: { '@type': 'Organization', name: SITE_NAME, url: `${SITE_URL}/` },
+          publisher: PUBLISHER,
           blogPost: list.map((p) => ({
             '@type': 'BlogPosting',
             headline: p.title,
             description: p.description,
-            datePublished: p.date,
+            datePublished: istDateTime(p.date),
+            dateModified: istDateTime(lastModified(p)),
             url: `${SITE_URL}${postPath(p.slug)}`,
           })),
         }}
       />
 
       <header className={s.intro}>
-        <h1>Blog</h1>
-        <p>Plain-language guides on UPI: splitting payments, what the rules actually say, and how the links under the hood work.</p>
+        <h1>UPI guides</h1>
+        <p>
+          Plain-language answers on what to check when a UPI payment won’t go through, how to pay a bill in parts,
+          where the rules are published, and how upi:// links work.
+        </p>
       </header>
 
       <div className={s.posts}>

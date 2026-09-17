@@ -8,12 +8,9 @@
 .post h2 { font-size: var(--text-heading); font-weight: 720; letter-spacing: -0.02em; line-height: 1.15; margin: 40px 0 10px; }
 .post h3 { font-size: 19px; font-weight: 680; letter-spacing: -0.01em; line-height: 1.25; margin: 28px 0 6px; }
 .post p { margin: 0 0 14px; text-wrap: pretty; }
-/*
- * 40.4em is var(--measure) (62ch) as drawn in Bricolage. A ch measure narrows when the web font replaces
- * the fallback (its zero is wider), which re-wraps every paragraph; em stays put.
- */
+/* var(--measure) is in em, so paragraphs don't re-wrap when the web font replaces the fallback. */
 .post p,
-.post li { max-width: 40.4em; }
+.post li { max-width: var(--measure); }
 .post ul,
 .post ol { margin: 0 0 14px; padding-left: 22px; }
 .post li { margin: 6px 0; text-wrap: pretty; }
