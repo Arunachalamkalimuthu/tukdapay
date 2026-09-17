@@ -1,15 +1,15 @@
 'use client';
-import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { useSearchParams } from 'next/navigation';
 import { splitAmount } from '@/lib/split';
 import { isValidVpa } from '@/lib/upi';
-import { countParts, createPlan, MAX_PARTS, parsePlan, shouldKeepPlan, type Plan } from '@/lib/plan';
+import { countParts, createPlan, MAX_PARTS, parsePlan, sameInput, shouldKeepPlan, type Plan } from '@/lib/plan';
 import {
   amountToInput,
   editAmountInput,
   formatInputAmount,
-  formatInr,
+  formatRupees,
   isValidAmount,
   MAX_AMOUNT,
   MAX_AMOUNT_TEXT,
@@ -19,6 +19,9 @@ import { MAX_TEXT, readPrefill, stripPrefill, type ParamSource } from '@/lib/pre
 import { parseRecent, rememberMerchant, type RecentMerchant } from '@/lib/recent';
 import { readJson, writeJson } from '@/lib/storage';
 import { DEFAULT_MAX } from '@/lib/site';
+import { collapseText, EXAMPLE_PARTS, EXAMPLE_TOTAL } from '@/lib/strip';
+import { amountReading, amountSize, previewText, resumeNoticeParts, shortReading, splitLabel, vpaParts } from '@/lib/splitter';
+import { TukdaStrip } from '@/components/TukdaStrip';
 import { PlanResult } from './PlanResult';
 import s from './Splitter.module.css';
 
@@ -78,14 +81,29 @@ function loadInitial(params: ParamSource): Initial {
 
 const subscribeNothing = () => () => {};
 
+/** Class names from the page's grid, so each part of the splitter lands in its place. */
+export interface SplitterLayout {
+  form?: string;
+  /** Holds the result, or `howItWorks` while there is no plan. */
+  side?: string;
+  /** Holds `howItWorks` once a plan has taken the side column. */
+  below?: string;
+}
+
+export interface SplitterProps {
+  /** The server-rendered "How it works" section. It is rendered in one place at a time. */
+  howItWorks?: ReactNode;
+  layout?: SplitterLayout;
+}
+
 /**
  * The form depends on localStorage and the URL, which only exist in the browser.
  * Until the page has hydrated, render the empty form as an inert placeholder (so the
  * static HTML has the right shape), then swap in the live form, which reads both once.
  */
-export function Splitter() {
+export function Splitter(props: SplitterProps) {
   const hydrated = useSyncExternalStore(subscribeNothing, () => true, () => false);
-  return hydrated ? <LiveSplitter /> : <SplitterForm initial={EMPTY} placeholder />;
+  return hydrated ? <LiveSplitter {...props} /> : <SplitterForm initial={EMPTY} placeholder {...props} />;
 }
 
 /**
@@ -94,7 +112,7 @@ export function Splitter() {
  * from the new URL, just as a reload would. The one exception is the form stripping the
  * prefill itself after a split, which keeps the form and its new plan as they are.
  */
-function LiveSplitter() {
+function LiveSplitter(props: SplitterProps) {
   const params = useSearchParams();
   const prefill = readPrefill(params);
   const prefillKey = prefill.present ? JSON.stringify(prefill) : '';
@@ -106,12 +124,12 @@ function LiveSplitter() {
     if (prefillKey || !stripping) setGeneration((g) => g + 1);
     setStripping(false);
   }
-  return <LoadedForm key={generation} params={params} onStripPrefill={() => setStripping(true)} />;
+  return <LoadedForm key={generation} params={params} onStripPrefill={() => setStripping(true)} {...props} />;
 }
 
-function LoadedForm({ params, onStripPrefill }: { params: ParamSource; onStripPrefill: () => void }) {
+function LoadedForm({ params, ...rest }: SplitterProps & { params: ParamSource; onStripPrefill: () => void }) {
   const [initial] = useState(() => loadInitial(params));
-  return <SplitterForm initial={initial} onStripPrefill={onStripPrefill} />;
+  return <SplitterForm initial={initial} {...rest} />;
 }
 
 /** Bring the plan into view and move focus to its heading. */
@@ -133,14 +151,54 @@ function changeAmount(e: React.ChangeEvent<HTMLInputElement>, before: string, se
   if (value !== raw) requestAnimationFrame(() => el.setSelectionRange(caret, caret));
 }
 
-interface FormProps {
+function FieldError({ id, children }: { id: string; children: ReactNode }) {
+  return (
+    <p id={id} className={s.error}>
+      <svg className={s.errorIcon} viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+        <circle cx="9" cy="9" r="7.75" fill="none" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M9 4.9v4.6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <circle cx="9" cy="12.8" r="1.15" fill="currentColor" />
+      </svg>
+      <span>{children}</span>
+    </p>
+  );
+}
+
+/**
+ * A saved merchant. When the chip is too narrow for the whole UPI ID, the start of the ID gives
+ * way to an ellipsis and its end stays in view. Screen readers get the full name and ID from
+ * aria-label (read from the two pieces, the ID would sound like two words).
+ */
+function RecentChip({ merchant, onPick }: { merchant: RecentMerchant; onPick: () => void }) {
+  const { head, tail } = vpaParts(merchant.pa);
+  return (
+    <button
+      type="button"
+      className={s.recentChip}
+      aria-label={merchant.pn ? `${merchant.pn} ${merchant.pa}` : merchant.pa}
+      onClick={onPick}
+    >
+      {merchant.pn && <span className={s.chipName}>{merchant.pn} </span>}
+      <span className={s.chipId}>
+        {head && <span className={s.chipHead}>{head}</span>}
+        <span className={s.chipTail}>{tail}</span>
+      </span>
+    </button>
+  );
+}
+
+const EXAMPLE_TEXT = `Example: ${formatRupees(EXAMPLE_TOTAL)} becomes ${collapseText(EXAMPLE_PARTS)}.`;
+
+const cx = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(' ');
+
+interface FormProps extends SplitterProps {
   initial: Initial;
   placeholder?: boolean;
   /** Called just before the form removes the prefill params from the URL. */
   onStripPrefill?: () => void;
 }
 
-function SplitterForm({ initial, placeholder = false, onStripPrefill }: FormProps) {
+function SplitterForm({ initial, placeholder = false, onStripPrefill, howItWorks, layout = {} }: FormProps) {
   const [total, setTotal] = useState(initial.total);
   const [pa, setPa] = useState(initial.pa);
   const [pn, setPn] = useState(initial.pn);
@@ -150,6 +208,14 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill }: FormProp
   const [plan, setPlan] = useState<Plan | null>(initial.plan);
   const [recent, setRecent] = useState(initial.recent);
   const [advancedOpen, setAdvancedOpen] = useState(() => parseAmount(initial.max) !== DEFAULT_MAX);
+  // True while the plan on screen was read back from storage rather than split in this visit.
+  const [restored, setRestored] = useState(initial.plan !== null);
+  // Plans split in this visit. Each new one remounts the result strip and plays "the cut" on it once;
+  // a restored plan never does. cutPending is cleared as soon as the cut has played, so a later
+  // tick only gets the strip's short feedback transitions.
+  const [cuts, setCuts] = useState(0);
+  const [cutPending, setCutPending] = useState(false);
+  const cutDone = useCallback(() => setCutPending(false), []);
 
   const totalRef = useRef<HTMLInputElement>(null);
   const paRef = useRef<HTMLInputElement>(null);
@@ -187,10 +253,19 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill }: FormProp
           : 'Max per payment must be more than ₹0.',
   };
   const valid = !errors.total && !errors.pa && !errors.max;
+  const input = { total: totalNum, pa: pa.trim(), pn: pn.trim(), note: note.trim(), maxPerTxn: maxNum };
+  // The plan on screen is already this form's split: Split only brings it back into view, so it
+  // steps back from solid magenta and leaves that to the result's next action.
+  const splitShown = valid && !!plan && sameInput(plan.input, input);
   // Errors show once a field has been left (or on a split attempt). Too many parts, or an
   // amount over the cap, shows straight away in place of the live preview it replaces.
   const shows = (f: Field) => !!errors[f] && (!!touched[f] || (f === 'total' && (tooManyParts || tooLarge)));
   const preview = partCount > 0 && !tooManyParts ? splitAmount(totalNum, maxNum) : null;
+  const totalEmpty = total.trim() === '';
+  const totalError = shows('total');
+  const reading = amountReading({ empty: totalEmpty, parts: preview, error: totalError });
+  const short = shortReading(reading);
+  const notice = resumeNoticeParts(plan, restored);
 
   const leave = (f: Field) => setTouched((t) => ({ ...t, [f]: true }));
   // Once a field is fine, editing it again hides its error until it is left again.
@@ -214,13 +289,15 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill }: FormProp
 
     setTotal(formatInputAmount(total));
     setMax(formatInputAmount(max));
-    const input = { total: totalNum, pa: pa.trim(), pn: pn.trim(), note: note.trim(), maxPerTxn: maxNum };
+    setRestored(false);
     // Splitting the same payment again (say, tapping Split above a restored plan) keeps its paid ticks.
     const next = shouldKeepPlan(plan, input) ? plan : createPlan(input);
     if (next === plan) {
       revealResult(resultRef.current, headingRef.current);
     } else {
       focusResult.current = true;
+      setCuts((c) => c + 1);
+      setCutPending(true);
       setPlan(next);
     }
     const saved = writeJson(PLAN_KEY, next);
@@ -247,6 +324,8 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill }: FormProp
 
   function startOver() {
     setPlan(null);
+    setRestored(false);
+    setCutPending(false);
     writeJson(PLAN_KEY, null);
     setTotal('');
     setPa('');
@@ -262,15 +341,50 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill }: FormProp
 
   return (
     <>
-      <form className={s.form} onSubmit={submit} noValidate inert={placeholder} aria-busy={placeholder || undefined}>
-        <div className={s.field}>
-          <label className={s.label} htmlFor="total">Amount</label>
-          <div className={s.amountWrap} data-invalid={shows('total')}>
-            <span className={s.rupee} aria-hidden="true">₹</span>
+      <form
+        className={cx(s.form, layout.form)}
+        onSubmit={submit}
+        noValidate
+        inert={placeholder}
+        aria-busy={placeholder || undefined}
+      >
+        {notice && (
+          <p className={s.resume}>
+            {notice.lead} <span className={s.nowrap}>{notice.next}</span>{' '}
+            <a
+              href="#result-title"
+              onClick={(e) => {
+                e.preventDefault();
+                revealResult(resultRef.current, headingRef.current);
+              }}
+            >
+              Go to payments
+            </a>
+          </p>
+        )}
+
+        {/* The instrument: the amount and the strip it cuts into. A click anywhere on it goes to the amount. */}
+        <div
+          className={s.instrument}
+          data-invalid={totalError}
+          onClick={(e) => {
+            if (e.target !== totalRef.current) totalRef.current?.focus();
+          }}
+        >
+          <div className={s.instHead}>
+            <label className={s.label} htmlFor="total">Amount</label>
+            <span className={s.reading} aria-hidden="true">
+              <span className={s.readingFull}>{reading}</span>
+              {short !== reading && <span className={s.readingShort}>{short}</span>}
+            </span>
+          </div>
+          <div className={s.amountRow}>
+            <span className={`${s.rupee} money`} aria-hidden="true">₹</span>
             <input
               ref={totalRef}
               id="total"
               className={s.amountInput}
+              data-size={amountSize(total)}
               inputMode="decimal"
               autoComplete="off"
               placeholder="0"
@@ -283,16 +397,28 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill }: FormProp
                 setTotal(formatInputAmount);
                 leave('total');
               }}
-              aria-invalid={shows('total')}
-              aria-describedby={shows('total') ? 'total-error' : 'total-hint'}
+              aria-invalid={totalError}
+              aria-describedby={totalError ? 'total-error' : totalEmpty ? 'total-example' : 'total-hint'}
             />
           </div>
-          <div id="total-hint" className={s.preview} aria-live="polite">
-            {shows('total') ? (
-              <p id="total-error" className={s.error}>{errors.total}</p>
-            ) : preview ? (
-              <SplitPreview chunks={preview} />
-            ) : null}
+          {/* One slot for the example, the live split or the amount error, so nothing below jumps as they swap. */}
+          <div className={s.stripSlot}>
+            <div id="total-hint" aria-live="polite">
+              {totalError ? (
+                <FieldError id="total-error">{errors.total}</FieldError>
+              ) : preview ? (
+                <span className="sr-only">{previewText(preview)}</span>
+              ) : null}
+            </div>
+            {!totalError &&
+              (totalEmpty ? (
+                <>
+                  <p id="total-example" className="sr-only">{EXAMPLE_TEXT}</p>
+                  <TukdaStrip variant="ghost" />
+                </>
+              ) : (
+                preview && <TukdaStrip variant="preview" parts={preview} />
+              ))}
           </div>
         </div>
 
@@ -317,21 +443,18 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill }: FormProp
             aria-invalid={shows('pa')}
             aria-describedby={shows('pa') ? 'pa-error' : undefined}
           />
-          {shows('pa') && <p id="pa-error" className={s.error}>{errors.pa}</p>}
+          {shows('pa') && <FieldError id="pa-error">{errors.pa}</FieldError>}
           {recent.length > 0 && (
             <div className={s.recent} role="group" aria-label="Recent merchants">
               {recent.map((r) => (
-                <button
+                <RecentChip
                   key={r.pa.toLowerCase()}
-                  type="button"
-                  className={s.recentChip}
-                  onClick={() => {
+                  merchant={r}
+                  onPick={() => {
                     setPa(r.pa);
                     setPn(r.pn);
                   }}
-                >
-                  {r.pn ? `${r.pn} · ${r.pa}` : r.pa}
-                </button>
+                />
               ))}
             </div>
           )}
@@ -339,7 +462,9 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill }: FormProp
 
         <div className={s.row}>
           <div className={s.field}>
-            <label className={s.label} htmlFor="pn">Merchant name <small>optional</small></label>
+            <label className={s.label} htmlFor="pn">
+              <span className={s.nowrap}>Merchant name</span> <span className={s.opt}>optional</span>
+            </label>
             <input
               id="pn"
               className={s.input}
@@ -350,7 +475,9 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill }: FormProp
             />
           </div>
           <div className={s.field}>
-            <label className={s.label} htmlFor="note">Note <small>optional</small></label>
+            <label className={s.label} htmlFor="note">
+              <span className={s.nowrap}>Note</span> <span className={s.opt}>optional</span>
+            </label>
             <input
               id="note"
               className={s.input}
@@ -363,15 +490,21 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill }: FormProp
         </div>
 
         <details className={s.advanced} open={advancedOpen} onToggle={(e) => setAdvancedOpen(e.currentTarget.open)}>
-          <summary>Max per payment</summary>
-          <div className={s.field}>
+          <summary>
+            <span>Max per payment</span>
+            {isValidAmount(maxNum) && <span className={`${s.summaryValue} money`}>{formatRupees(maxNum)}</span>}
+            <svg className={s.chevron} width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+              <path d="M3.5 6l4.5 4.5L12.5 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </summary>
+          <div className={`${s.field} ${s.advancedBody}`}>
             <label className={s.label} htmlFor="max">Each payment stays at or under</label>
-            <div className={`${s.amountWrap} ${s.small}`} data-invalid={shows('max')}>
-              <span className={s.rupee} aria-hidden="true">₹</span>
+            <div className={s.maxWrap} data-invalid={shows('max')}>
+              <span className={`${s.maxRupee} money`} aria-hidden="true">₹</span>
               <input
                 ref={maxRef}
                 id="max"
-                className={s.amountInput}
+                className={s.maxInput}
                 inputMode="decimal"
                 autoComplete="off"
                 value={max}
@@ -387,58 +520,39 @@ function SplitterForm({ initial, placeholder = false, onStripPrefill }: FormProp
                 aria-describedby={shows('max') ? 'max-error' : undefined}
               />
             </div>
-            {shows('max') && <p id="max-error" className={s.error}>{errors.max}</p>}
+            {shows('max') && <FieldError id="max-error">{errors.max}</FieldError>}
           </div>
         </details>
 
         {/* aria-disabled rather than disabled: it stays focusable, and pressing it explains what's missing. */}
         <button
           type="submit"
-          className={`btn btn-primary ${s.submit}`}
+          className={`btn ${splitShown ? 'btn-secondary' : 'btn-primary'} btn-lg ${s.submit}`}
           aria-disabled={!valid}
           aria-describedby={valid ? undefined : 'submit-hint'}
         >
-          Split into payments
+          {splitLabel(valid, partCount)}
         </button>
-        {!valid && <span id="submit-hint" className={s.srOnly}>{submitHint}</span>}
+        {!valid && <span id="submit-hint" className="sr-only">{submitHint}</span>}
       </form>
 
-      {plan && (
-        <PlanResult
-          plan={plan}
-          sectionRef={resultRef}
-          headingRef={headingRef}
-          onTogglePaid={togglePaid}
-          onStartOver={startOver}
-        />
-      )}
-    </>
-  );
-}
-
-const chipAmount = (n: number) => formatInr(n).replace(/\.00$/, '');
-
-/** "3 payments: ₹1,999 + ₹1,999 + ₹1,002"; longer splits collapse to "25 × ₹1,999 + ₹25". */
-function SplitPreview({ chunks }: { chunks: number[] }) {
-  const n = chunks.length;
-  if (n === 1) return <span className={s.previewLabel}>Under the limit — one payment</span>;
-  const first = chunks[0];
-  const last = chunks[n - 1];
-  const chips =
-    n <= 3
-      ? chunks.map(chipAmount)
-      : last === first
-        ? [`${n} × ${chipAmount(first)}`]
-        : [`${n - 1} × ${chipAmount(first)}`, chipAmount(last)];
-  return (
-    <>
-      <span className={s.previewLabel}>{n} payments:</span>
-      {chips.map((text, i) => (
-        <Fragment key={i}>
-          <span className={`${s.chip} ${i === chips.length - 1 ? s.last : ''}`}>{text}</span>
-          {i < chips.length - 1 && <span className={s.plus} aria-hidden="true">+</span>}
-        </Fragment>
-      ))}
+      <div className={cx(s.side, layout.side)}>
+        {plan ? (
+          <PlanResult
+            plan={plan}
+            sectionRef={resultRef}
+            headingRef={headingRef}
+            onTogglePaid={togglePaid}
+            onStartOver={startOver}
+            cut={cuts}
+            animateCut={cutPending}
+            onCutDone={cutDone}
+          />
+        ) : (
+          howItWorks
+        )}
+      </div>
+      {plan && howItWorks && <div className={layout.below}>{howItWorks}</div>}
     </>
   );
 }

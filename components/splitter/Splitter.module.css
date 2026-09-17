@@ -1,86 +1,349 @@
-.form { display: grid; gap: 18px; }
-.field { display: grid; gap: 6px; }
-.label { font-weight: 500; }
-.label small { color: var(--muted); font-weight: 400; font-size: 0.85em; margin-left: 4px; }
-.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-@media (max-width: 380px) { .row { grid-template-columns: 1fr; } }
+/* ===== Form ===== */
+.form { display: grid; gap: 20px; min-width: 0; }
+.field { display: grid; gap: 8px; min-width: 0; }
+.label { font-size: var(--text-label); font-weight: 600; line-height: 1.3; }
+.nowrap { white-space: nowrap; }
+.opt { color: var(--muted); font-size: var(--text-tick); font-weight: 400; white-space: nowrap; }
+
+/* Name and note side by side; labels sit on the inputs, so the inputs line up even if one label wraps. */
+.row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 12px; align-items: end; }
+@media (max-width: 359.98px) {
+  .row { grid-template-columns: minmax(0, 1fr); }
+}
 
 .input {
-  font: inherit; color: var(--ink); background: var(--surface);
-  border: 1.5px solid var(--line); border-radius: var(--radius);
-  padding: 11px 13px; width: 100%; min-width: 0;
+  font: inherit; font-size: var(--text-body); line-height: 1.2; color: var(--ink);
+  width: 100%; min-width: 0; height: 52px; padding: 0 14px;
+  background: var(--surface); border: 1.5px solid var(--field); border-radius: var(--radius);
 }
-.input[aria-invalid='true'] { border-color: var(--error); }
-.error { color: var(--error); font-size: 15px; font-weight: 500; margin: 0; }
+.input[aria-invalid='true'] { border-color: var(--error); box-shadow: inset 0 0 0 1px var(--error); }
 
-.amountWrap {
-  display: flex; align-items: baseline; gap: 6px;
-  background: var(--surface); border: 1.5px solid var(--line);
-  border-radius: var(--radius); padding: 8px 16px;
+.error {
+  display: flex; gap: 8px; align-items: flex-start; margin: 0;
+  color: var(--error); font-size: var(--text-label); font-weight: 600; line-height: 1.35;
 }
-.amountWrap:focus-within { border-color: var(--accent); outline: 3px solid var(--accent); outline-offset: 2px; }
-.amountWrap[data-invalid='true'] { border-color: var(--error); }
-.rupee { font-size: 34px; font-weight: 500; color: var(--muted); }
+.errorIcon { flex: none; width: 18px; height: 18px; margin-top: 1px; }
+
+/* ===== The instrument: the amount and its strip ===== */
+.instrument {
+  container-type: inline-size;
+  padding: 12px 16px 16px;
+  background: var(--surface); border: 1.5px solid var(--field); border-radius: var(--radius-lg);
+  cursor: text;
+}
+.instrument:focus-within { border-color: var(--accent); outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+.instrument[data-invalid='true'] { border-color: var(--error); }
+
+.instHead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: 12px; }
+.reading { margin-left: auto; color: var(--muted); font-size: var(--text-small); line-height: 1.3; text-align: right; }
+/*
+ * "Under the limit — one payment" needs 286px beside the label; on a narrower instrument it would
+ * wrap onto a second line and push the form down while the amount is typed, so it reads "One payment".
+ */
+.readingShort { display: none; }
+@container (max-width: 289.98px) {
+  .readingFull:has(+ .readingShort) { display: none; }
+  .readingShort { display: inline; }
+}
+
+.amountRow { display: flex; align-items: baseline; gap: 4px; margin: 2px 0 12px; }
+.rupee { flex: none; color: var(--muted); font-size: 34px; font-weight: 500; line-height: 1; }
+
+/*
+ * The amount steps down as it gets wider (data-size from lib/splitter.ts, which counts digits and
+ * separators). On a narrow instrument each step is also capped by the instrument's width (cqi), so
+ * the widest value of that step still fits. The divisors are those values' widths in em, measured
+ * in Chrome at weight 750 and --money-width 84% ("99,99,999.99" 5.03, "1,00,00,00,000.0" 6.35,
+ * "1,00,00,00,000.00" 6.86) plus a little room for the caret; 22px is the ₹ sign and its gap.
+ */
 .amountInput {
-  font: inherit; color: var(--ink); border: 0; padding: 0; background: transparent; width: 100%; min-width: 0;
-  font-size: 52px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1;
+  font: inherit;
+  font-size: min(var(--text-amount), calc((100cqi - 22px) / 5.12));
+  font-weight: 750; line-height: 1.08; letter-spacing: -0.02em;
+  font-stretch: var(--money-width); font-variant-numeric: tabular-nums;
+  width: 100%; min-width: 0; margin: 0; padding: 0;
+  color: var(--ink); background: transparent; border: 0; border-radius: 0;
+  cursor: text;
 }
-.amountInput:focus-visible { outline: 0; }
-.amountWrap.small { padding: 6px 12px; }
-.amountWrap.small .rupee { font-size: 18px; }
-.amountWrap.small .amountInput { font-size: 22px; font-weight: 700; }
+.amountInput[data-size='md'] { font-size: min(44px, calc((100cqi - 22px) / 6.44)); }
+.amountInput[data-size='sm'] { font-size: min(36px, calc((100cqi - 22px) / 6.94)); }
+.amountInput::placeholder { color: var(--field); }
+/* The instrument draws the focus ring around the whole panel. */
+.amountInput:focus-visible { outline: none; }
 
-.preview { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-height: 30px; font-weight: 700; }
-.previewLabel { color: var(--muted); font-weight: 500; }
-.chip { background: var(--surface); border: 1.5px solid var(--line); border-radius: 8px; padding: 2px 9px; font-size: 15px; }
-.chip.last { border-color: var(--accent); color: var(--accent); }
-.plus { color: var(--muted); font-weight: 500; }
+/*
+ * Holds the ghost strip, the live strip or the amount error. The strip with its figures is 38px; the
+ * slot keeps two lines of error text (2.5px more), so the one- and two-line errors swap in place.
+ */
+.stripSlot { min-height: calc(2 * 1.35 * var(--text-label)); }
 
-.recent { display: flex; flex-wrap: wrap; gap: 6px; }
+/* ===== UPI ID and recent merchants ===== */
+.recent { container-type: inline-size; display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
 .recentChip {
-  font: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
-  background: transparent; color: var(--ink); border: 1.5px solid var(--line); border-radius: 999px; padding: 4px 11px;
+  font: inherit; font-size: var(--text-small); line-height: 1.2; text-align: left;
+  display: inline-flex; align-items: center; gap: 10px;
+  max-width: 100%; min-width: 0; min-height: 44px; padding: 0 14px;
+  color: var(--ink); background: var(--surface); border: 1.5px solid var(--field); border-radius: var(--radius);
+  cursor: pointer;
 }
-.recentChip:hover { border-color: var(--accent); color: var(--accent); }
+.recentChip:hover { border-color: var(--ink); }
+.chipName, .chipHead, .chipTail { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/*
+ * The UPI ID tells merchants apart, so it gets the room: a long name stops at 40% of the row
+ * (cqi, not %, which would cut short names in a chip sized to its content).
+ */
+.chipName { flex: 0 1 auto; max-width: 40cqi; font-weight: 600; }
+.chipId { flex: 0 1 auto; display: flex; min-width: 0; color: var(--muted); }
+/* A long ID loses its middle: the head takes the ellipsis, the end of the ID and the handle stay. */
+.chipHead { flex: 0 1 auto; }
+.chipTail { flex: 0 0 auto; max-width: 100%; }
 
-.advanced summary { cursor: pointer; color: var(--muted); font-weight: 500; }
-.advanced[open] summary { margin-bottom: 8px; }
+/* ===== Max per payment ===== */
+.advanced summary {
+  display: flex; align-items: center; gap: 8px; min-height: 44px;
+  font-size: var(--text-label); font-weight: 600; line-height: 1.3;
+  list-style: none; cursor: pointer;
+}
+.advanced summary::-webkit-details-marker { display: none; }
+.summaryValue { margin-left: auto; color: var(--muted); font-weight: 500; }
+.chevron { flex: none; color: var(--muted); }
+.advanced summary > span:first-child + .chevron { margin-left: auto; }
+.advanced[open] .chevron { transform: rotate(180deg); }
+/* The field below shows the value while it's open. */
+.advanced[open] .summaryValue { visibility: hidden; }
+.advancedBody { padding-top: 8px; }
 
-.srOnly {
-  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
-  overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+.maxWrap {
+  display: flex; align-items: center; gap: 4px; max-width: 16rem; height: 52px; padding: 0 14px;
+  background: var(--surface); border: 1.5px solid var(--field); border-radius: var(--radius);
+}
+.maxWrap:focus-within { border-color: var(--accent); outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+.maxWrap[data-invalid='true'] { border-color: var(--error); box-shadow: inset 0 0 0 1px var(--error); }
+.maxRupee { flex: none; color: var(--muted); font-size: 20px; font-weight: 500; }
+.maxInput {
+  font: inherit; font-size: 22px; font-weight: 700; line-height: 1.2;
+  font-stretch: var(--money-width); font-variant-numeric: tabular-nums;
+  width: 100%; min-width: 0; padding: 0; color: var(--ink); background: transparent; border: 0;
+}
+.maxInput:focus-visible { outline: none; }
+
+.submit { width: 100%; scroll-margin-block: 12px; }
+
+/* ===== Resume banner (a saved plan with parts still to pay) ===== */
+/*
+ * "part 2 of 3 is next." and the link each stay whole, so a narrow banner breaks after the colon
+ * ("You have a split in progress: / part 2 of 3 is next. Go to payments"), never mid-phrase.
+ */
+.resume {
+  margin: 0; padding: 10px 16px;
+  color: var(--ink); background: var(--accent-wash); border-radius: var(--radius);
+  font-size: var(--text-small); line-height: 1.6;
+}
+/* Inline, so the row stays slim; the padding grows the tap area to 44px without moving the lines. */
+.resume a { padding-block: 11px; font-weight: 650; white-space: nowrap; }
+/* Wide screens show the result beside the form, so there is nothing to go to. */
+@media (min-width: 960px) {
+  .resume { display: none; }
 }
 
-/* Result */
-.result { margin-top: 40px; scroll-margin-top: 16px; }
-.resultHead { position: sticky; top: 0; background: var(--paper); padding: 10px 0 12px; z-index: 2; border-bottom: 1.5px solid var(--line); }
-.resultHead h2 { font-size: 24px; font-weight: 800; margin: 0 0 2px; scroll-margin-top: 16px; }
-.resultHead p { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
-.progress { height: 6px; border-radius: 3px; background: var(--line); margin: 12px 0 6px; overflow: hidden; }
-.progress span { display: block; height: 100%; background: var(--paid); transition: width 200ms ease; }
-.progressText { font-weight: 500; margin: 0; }
-.next { margin-top: 10px; width: 100%; font-size: 17px; }
-.done { margin-top: 10px; padding: 12px 14px; border-radius: var(--radius); background: var(--paid-wash); color: var(--paid); font-weight: 700; }
+/* ===== Result ===== */
+.side { min-width: 0; }
+.result { margin-top: var(--space-48); min-width: 0; scroll-margin-top: 16px; }
+.resultTitle {
+  width: fit-content; max-width: 100%;
+  font-size: var(--text-heading); font-weight: 720; letter-spacing: -0.02em; line-height: 1.15;
+  scroll-margin-top: 16px;
+}
+/* Focus lands here after a split: a rounded ring that clears the text and the payee line. */
+.resultTitle:focus-visible { outline-offset: 4px; border-radius: var(--radius-sm); }
+.payee { margin: 8px 0 0; color: var(--muted); font-size: var(--text-small); line-height: 1.45; overflow-wrap: anywhere; }
 
-.parts { list-style: none; margin: 0; padding: 0; }
+.parts {
+  container-type: inline-size;
+  list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 6px;
+}
+/* Room for the focus ring when the browser scrolls a control to the edge of the screen. */
+.parts :is(a, input), .actions > *, .bar a { scroll-margin-block: 12px; }
+
+/* Every row has the same grid and padding, so the amounts line up whatever the state. */
 .part {
-  display: grid; grid-template-columns: 1fr auto;
-  grid-template-areas: 'amount pay' 'label pay' 'qr qr' 'paid paid';
-  column-gap: 14px; row-gap: 4px; align-items: center;
-  padding: 16px 4px; border-bottom: 1.5px solid var(--line);
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-areas: 'tick body';
+  column-gap: 12px; align-items: center;
+  padding: 12px 12px 12px 8px;
+  border-radius: var(--radius-lg);
 }
 .part.isPaid { background: var(--paid-wash); }
-.part.isNext { box-shadow: inset 3px 0 0 var(--accent); padding-left: 10px; }
-.partAmount { grid-area: amount; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
-.part.isPaid .partAmount { color: var(--paid); }
-.partLabel { grid-area: label; color: var(--muted); }
-.partPay { grid-area: pay; white-space: nowrap; }
-.part.isPaid .partPay { background: var(--surface); color: var(--muted); border-color: var(--line); }
-.partQr { grid-area: qr; display: none; margin-top: 10px; }
-.partQr canvas { display: block; box-sizing: content-box; border-radius: 6px; background: #fff; padding: 6px; image-rendering: pixelated; }
-@media (min-width: 700px) and (hover: hover) { .partQr { display: block; } }
-.partPaid { grid-area: paid; display: flex; align-items: center; gap: 8px; margin-top: 6px; font-weight: 500; cursor: pointer; }
-.partPaid input { width: 20px; height: 20px; accent-color: var(--paid); }
+.part.isNext { background: var(--accent-wash); }
 
-.actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
-.fine { color: var(--muted); font-size: 15px; margin-top: 24px; max-width: 48ch; }
+/*
+ * The figures and the Pay control share one cell: figures left, Pay right while both fit on a line,
+ * Pay under the figures when they don't (a narrow column beside a QR, bigger text, a long amount).
+ * Money is never squeezed to make room for a button. (Flex lines break on each item's full width,
+ * so Pay moves down before the figures would ever shrink.)
+ */
+.partBody {
+  grid-area: body; min-width: 0;
+  container-type: inline-size;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px;
+}
+.partFigures { display: grid; }
+
+/*
+ * Amounts never break mid-number. The only cap is the cell itself: if the plan's longest amount
+ * (--amount-chars, set on the list) couldn't fit the cell on its own line, every amount steps down
+ * together, never below 20px. 0.44em is a generous width per character of money type (Chrome
+ * measures 0.41–0.43em at weight 720 and --money-width 84%).
+ * Every row makes the same call about Pay: the amount claims the width of the plan's longest amount
+ * and both Pay controls claim 84px, so a short last part or a paid row's "Pay again" keeps ranks.
+ * Only if an amount still can't fit its own line (a ₹100 crore part at 320px with wide letter
+ * spacing) does it wrap, and then only after a comma (the <wbr>s in PlanResult).
+ */
+.partAmount {
+  min-width: calc(var(--amount-chars, 9) * 0.44em);
+  font-size: max(20px, min(var(--text-money), calc(100cqi / (var(--amount-chars, 9) * 0.44))));
+  font-weight: 720; letter-spacing: -0.01em; line-height: 1.05;
+}
+.partLabel { margin-top: 4px; color: var(--muted); font-size: var(--text-tick); font-weight: 600; line-height: 1.2; white-space: nowrap; }
+.partPay { min-width: 84px; }
+.payAgain { justify-content: flex-start; font-size: var(--text-small); }
+
+/* The tick column: a 28px box with "Paid" under it; the whole column toggles it. */
+.tick {
+  grid-area: tick; align-self: stretch;
+  display: grid; justify-items: center; align-content: center; gap: 8px;
+  min-height: 60px; cursor: pointer;
+}
+.boxWrap { position: relative; display: block; width: 28px; height: 28px; }
+.box {
+  appearance: none; display: block; width: 28px; height: 28px; margin: 0;
+  background: var(--surface); border: 2px solid var(--field); border-radius: 8px;
+  cursor: pointer;
+}
+.box:checked { background: var(--paid); border-color: var(--paid); }
+.check { position: absolute; inset: 0; display: none; width: 16px; height: 16px; margin: auto; color: var(--paid-ink); pointer-events: none; }
+.box:checked + .check { display: block; }
+.tickLabel { color: var(--muted); font-size: var(--text-tick); font-weight: 600; line-height: 1; }
+.isPaid .tickLabel { color: var(--paid); }
+
+/*
+ * QR codes: only on wide screens with a mouse (see QrCode.tsx). The tile is the code with its
+ * four-module quiet zone drawn in: 200px for the next part and 152px for the others (about 168px
+ * and 128px of code for a typical 41-module link), one step smaller in a narrow column.
+ */
+.part { --qr-next: 200px; --qr-other: 152px; }
+@container (max-width: 599px) {
+  .part { --qr-next: 184px; --qr-other: 144px; }
+}
+.qrSlot { grid-area: qr; display: none; position: relative; justify-self: end; }
+.qr {
+  /* A QR stays dark on white in every theme, or phone cameras can't read it. */
+  --qr-ground: #fff;
+  --qr-ink: #15121e;
+  --qr-tile: var(--qr-other);
+  box-sizing: border-box; width: var(--qr-tile); height: var(--qr-tile); margin: 0; padding: 0;
+  color: var(--qr-ink); background: var(--qr-ground); border-radius: 8px;
+  font-size: var(--text-tick); line-height: 1.3;
+}
+.qr[data-failed] { padding: 12px; }
+.qr svg { display: block; width: 100%; height: 100%; }
+.isNext .qr { --qr-tile: var(--qr-next); }
+/* The whole tile dims once paid (a bright white tile would still pull the eye in the dark theme). */
+.isPaid .qr { opacity: 0.2; }
+.qrPaid {
+  position: absolute; inset: 0; width: max-content; height: max-content; margin: auto; padding: 4px 12px;
+  color: var(--paid-ink); background: var(--paid); border-radius: 999px;
+  font-size: var(--text-small); font-weight: 650; line-height: 1.3;
+}
+
+/* ===== The action bar ===== */
+.bar {
+  position: sticky; bottom: 0; z-index: 2;
+  margin: 16px calc(-1 * var(--gutter)) 0;
+  padding: 12px var(--gutter) calc(12px + env(safe-area-inset-bottom, 0px));
+  background: var(--paper);
+  border-top: 1px solid var(--line);
+}
+.status {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: 12px;
+  margin: 8px 0 0; font-size: var(--text-small); line-height: 1.45;
+}
+.status b { font-weight: 650; }
+.toGo { margin-left: auto; color: var(--muted); }
+.bar .nextBtn { width: 100%; margin-top: 12px; padding-inline: 20px; justify-content: space-between; text-align: left; }
+.nextFigure { font-size: 21px; font-weight: 720; letter-spacing: -0.01em; }
+.bar .nextScan { display: none; }
+.done {
+  display: flex; align-items: center; min-height: 56px; margin: 12px 0 0; padding: 12px 16px;
+  color: var(--paid); background: var(--paid-wash); border-radius: var(--radius);
+  font-size: var(--text-small); font-weight: 650; line-height: 1.4;
+}
+
+/*
+ * Keyboard focus is never hidden under the bar: while a result is on the page, the browser keeps
+ * the bar's height clear at the bottom when it scrolls a focused control into view. PlanResult
+ * measures the bar into --bar-h (it grows with its text); 176px stands in until it has.
+ */
+:global(html):has(.bar) { scroll-padding-bottom: calc(var(--bar-h, 176px) + 12px); }
+
+/* Short screens (a phone on its side): the bar would cover most of the list, so it stays in the flow. */
+@media (max-height: 560px) {
+  .bar { position: static; }
+  :global(html):has(.bar) { scroll-padding-bottom: 12px; }
+}
+
+/* ===== Actions and fine print ===== */
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 20px; }
+/* Equal halves when both fit on one line; otherwise each takes the full width. */
+.share { flex: 1 1 0; min-width: max-content; padding-inline: 12px; font-size: 16px; white-space: nowrap; }
+.actionsBreak { flex-basis: 100%; height: 0; }
+.startOver { font-size: var(--text-body); }
+.swap { display: inline-grid; }
+.swap > span { grid-area: 1 / 1; }
+.swap > .swapHidden { visibility: hidden; }
+
+.fine { margin: 16px 0 0; max-width: var(--measure-narrow); color: var(--muted); font-size: var(--text-small); line-height: 1.45; }
+
+/* ===== Motion ===== */
+@media (prefers-reduced-motion: no-preference) {
+  .part { transition: background-color var(--duration-feedback) ease; }
+  .box { transition: background-color var(--duration-feedback) ease, border-color var(--duration-feedback) ease; }
+  .chevron { transition: transform var(--duration-feedback) ease; }
+  .recentChip { transition: border-color var(--duration-feedback) ease; }
+}
+
+/* ===== Wide screens with a mouse: a QR on every row, and the bar points at the next one ===== */
+@media (min-width: 700px) and (hover: hover) {
+  .part {
+    grid-template-columns: 44px minmax(0, 1fr) var(--qr-next);
+    grid-template-areas: 'tick body qr';
+    column-gap: 16px;
+  }
+  @container (max-width: 599px) {
+    .part { column-gap: 12px; }
+  }
+  .qrSlot { display: block; }
+  .bar .nextPay { display: none; }
+  .bar .nextScan { display: flex; }
+}
+
+/* ===== Two-column workbench ===== */
+@media (min-width: 960px) {
+  /* The result starts beside the hero, so revealing it keeps the page at the top with the header in view. */
+  .result { margin-top: 0; scroll-margin-top: 120px; }
+  .bar { margin-inline: 0; padding-inline: 0; }
+  .actionsBreak { display: none; }
+  .share { flex: 0 0 auto; padding-inline: 20px; }
+  .startOver { margin-left: 8px; }
+}
+
+/* ===== Forced colours: the custom checkbox and the row states keep a visible shape ===== */
+@media (forced-colors: active) {
+  .box { forced-color-adjust: none; background: Canvas; border-color: CanvasText; }
+  .box:checked { background: Highlight; border-color: Highlight; }
+  .check { forced-color-adjust: none; color: HighlightText; }
+  .part.isNext { outline: 2px solid CanvasText; outline-offset: -2px; }
+  .instrument:focus-within { outline-color: Highlight; }
+  .qrPaid { border: 1px solid CanvasText; }
+}
