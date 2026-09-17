@@ -5,6 +5,7 @@
  * site name from the WebSite node, which must be on the home page. Posts use blogPosting() and breadcrumbList().
  */
 import { ogImagePath, OG_SIZE } from './og.ts';
+import { toRfc822 } from './rss.ts';
 import { REPO_URL, SITE_NAME, SITE_URL } from './site.ts';
 
 const HOME = `${SITE_URL}/`;
@@ -27,7 +28,10 @@ export interface PersonNode {
   url: string;
 }
 
-/** Author of the posts. The post footer names the same person, so the markup matches what readers see. */
+/**
+ * Author of the posts. SEO-08: the post footer must name this person (or switch author to the Organization) so the
+ * markup matches what readers see.
+ */
 export const AUTHOR: PersonNode = {
   '@type': 'Person',
   name: 'Arunachalam Kalimuthu',
@@ -93,15 +97,12 @@ export function faqPage(entries: readonly { q: string; a: string }[]) {
   };
 }
 
-/** "2026-09-17" -> "2026-09-17T09:00:00+05:30": 09:00 in India, as in the RSS feed. Throws on anything else. */
+/**
+ * "2026-09-17" -> "2026-09-17T09:00:00+05:30": 09:00 in India, as in the RSS feed. Throws RangeError on anything
+ * but a real YYYY-MM-DD date. The feed's parser does the checking, so the markup and the feed can't disagree.
+ */
 export function istDateTime(isoDate: string): string {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
-  if (!m) throw new RangeError(`expected YYYY-MM-DD, got: "${isoDate}"`);
-  const [year, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
-  const d = new Date(Date.UTC(year, month - 1, day));
-  if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) {
-    throw new RangeError(`not a real date: "${isoDate}"`);
-  }
+  toRfc822(isoDate);
   return `${isoDate}T09:00:00+05:30`;
 }
 

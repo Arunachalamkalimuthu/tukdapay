@@ -16,7 +16,7 @@ export const FEED_URL = `${SITE_URL}/blog/feed.xml`;
 export const FEED_ALTERNATE = { 'application/rss+xml': [{ url: FEED_URL, title: FEED_TITLE }] };
 
 /**
- * JSON-LD for a `<script type="application/ld+json">`. `<` is written as < so a string
+ * JSON-LD for a `<script type="application/ld+json">`. `<` is written as \u003c so a string
  * containing `</script>` can't end the element early; JSON.parse reads it back unchanged.
  */
 export function jsonLdHtml(data: object): string {

@@ -137,17 +137,37 @@ body:has(.page-home) { --container: 440px; }
 /* ===== Font fallback for Android =====
  * next/font sizes its fallback face to Bricolage's metrics, but on local(Arial), which Android doesn't have.
  * There the text falls through to Roboto at its own size, so lines rewrap and the page jumps when Bricolage
- * arrives. This face does the same for Roboto, with next/font's method and metrics (capsize data):
- * size-adjust = (470/1000) / (911/2048); ascent and descent = 930 and 270 / (1000 × size-adjust).
- * Where Arial exists, next/font's face comes first in the stack and this one isn't used.
+ * arrives. These faces do the same for Roboto. Where Arial exists, next/font's face comes first in the stack
+ * and these aren't used.
+ *
+ * Chrome on Android matches local() against the full and PostScript names of the font files in /system/fonts.
+ * Android 12 and later have one variable Roboto-Regular.ttf (full name "Roboto"), and Chrome sets its weight
+ * axis from the text. Android 11 and earlier have static files ("Roboto", "Roboto Bold"), and Chrome doesn't
+ * embolden a face whose weight range reaches 600, so one face for every weight would draw headings in Regular.
+ * Hence two faces:
+ * - up to 550: next/font's method and metrics (capsize data): size-adjust = (470/1000) / (911/2048);
+ *   ascent and descent = 930 and 270 / (1000 × size-adjust).
+ * - 551 and up: Roboto Bold where that file exists, otherwise the variable Roboto. Bricolage's bold weights run
+ *   wider against Roboto: on the site's own text in Chrome with AOSP Roboto, 106–109% of Roboto's width at the
+ *   same weight (105.7% at 400), and 108.5% moved the fewest lines across 320–430px viewports. Ascent and
+ *   descent are worked out as above.
  */
 @font-face {
   font-family: 'Bricolage Fallback Android';
-  src: local('Roboto'), local('Roboto Regular'), local('Roboto-Regular');
-  font-weight: 100 900;
+  src: local('Roboto'), local('Roboto-Regular');
+  font-weight: 100 550;
   size-adjust: 105.66%;
   ascent-override: 88.02%;
   descent-override: 25.55%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Bricolage Fallback Android';
+  src: local('Roboto Bold'), local('Roboto-Bold'), local('Roboto'), local('Roboto-Regular');
+  font-weight: 551 900;
+  size-adjust: 108.5%;
+  ascent-override: 85.71%;
+  descent-override: 24.88%;
   line-gap-override: 0%;
 }
 

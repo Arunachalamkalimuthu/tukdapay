@@ -17,6 +17,7 @@ import {
   website,
 } from '../lib/schema.ts';
 import { jsonLdHtml } from '../lib/metadata.ts';
+import { toRfc822 } from '../lib/rss.ts';
 import { REPO_URL } from '../lib/site.ts';
 
 const post = {
@@ -87,6 +88,19 @@ test('istDateTime rejects anything but a real YYYY-MM-DD date', () => {
   for (const bad of ['2026-9-17', '17-09-2026', '2026-02-30', '2026-13-01', '2026-09-17T09:00:00+05:30', '']) {
     assert.throws(() => istDateTime(bad), RangeError, bad);
   }
+});
+
+test('istDateTime accepts exactly the dates the RSS feed accepts', () => {
+  const dates = ['2026-09-17', '2028-02-29', '2027-02-29', '2026-04-31', '2026-00-10', '2026-9-17', ' 2026-09-17', 'x'];
+  const accepts = (fn: (d: string) => string, d: string) => {
+    try {
+      fn(d);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  for (const d of dates) assert.equal(accepts(istDateTime, d), accepts(toRfc822, d), d);
 });
 
 test('blogPosting carries headline, dates with the IST offset, author, publisher logo, image and page', () => {

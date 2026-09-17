@@ -31,7 +31,10 @@ export function ogImagePath(key: string): string {
   return `/og/${key}.png`;
 }
 
-/** Every card the build writes: one per post (so a new post in content/posts.ts gets one), then the pages. */
+/**
+ * Every card the build writes: one per post (so a new post in content/posts.ts gets one), then the pages.
+ * Throws if two cards share a file, or if a title or label has a character the card fonts can't draw.
+ */
 export function ogCards(posts: readonly { slug: string; title: string }[]): OgCard[] {
   const cards: OgCard[] = [
     ...posts.map((p) => ({ key: p.slug, label: 'Blog', title: p.title, alt: `TukdaPay blog: ${p.title}` })),
@@ -42,6 +45,13 @@ export function ogCards(posts: readonly { slug: string; title: string }[]): OgCa
     ogImagePath(card.key);
     if (seen.has(card.key)) throw new Error(`two share cards would both write /og/${card.key}.png`);
     seen.add(card.key);
+    const missing = unsupportedCharacters(`${card.label} ${card.title}`);
+    if (missing.length > 0) {
+      throw new Error(
+        `share card ${card.key}: ${missing.map((ch) => `"${ch}"`).join(', ')} not in the card fonts. Card text stays ` +
+          'Latin plus ₹ and → (the committed Bricolage Grotesque TTFs); add a width in lib/og.ts only if the font has the glyph.',
+      );
+    }
   }
   return cards;
 }
@@ -75,8 +85,21 @@ const ASCII_WIDTHS = [
 const OTHER_WIDTHS: Record<string, number> = {
   '₹': 575, '–': 545, '—': 821, '‘': 219, '’': 219, '“': 426, '”': 426, '→': 640, '…': 795,
 };
-/** Anything else (a glyph the table doesn't list) is counted as a wide letter. */
+/** Anything else (a glyph the table doesn't list) is counted as a wide letter. ogCards rejects such text. */
 const UNKNOWN_WIDTH = 1004;
+
+const hasWidth = (ch: string) => {
+  const code = ch.codePointAt(0)!;
+  return (code >= 0x20 && code <= 0x7e) || Object.hasOwn(OTHER_WIDTHS, ch);
+};
+
+/**
+ * Characters in `text` with no width above, each listed once. The card fonts are Latin subsets, so satori would
+ * draw these as missing glyphs (or fetch another font at build time), and the title fitting would guess.
+ */
+export function unsupportedCharacters(text: string): string[] {
+  return [...new Set(Array.from(text).filter((ch) => !hasWidth(ch)))];
+}
 
 /** Rendered width in px of `text` at `fontSize`, with letter spacing in em added after every character. */
 export function textWidth(text: string, fontSize: number, letterSpacing: number = OG_TITLE.letterSpacing): number {

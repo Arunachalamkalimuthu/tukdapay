@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { OG_TITLE, PAGE_CARDS, fitTitle, ogCards, ogImage, ogImagePath, textWidth } from '../lib/og.ts';
+import { OG_TITLE, PAGE_CARDS, fitTitle, ogCards, ogImage, ogImagePath, textWidth, unsupportedCharacters } from '../lib/og.ts';
 import { posts } from '../content/posts.ts';
 
 const post = (slug: string, title: string) => ({ slug, title, description: 'x', date: '2026-09-17' });
@@ -51,6 +51,23 @@ test('a post added to posts.ts gets a card without any other change', () => {
 test('two cards can never write the same file', () => {
   assert.throws(() => ogCards([post('blog', 'Clashes with the blog index card')]), /blog/);
   assert.throws(() => ogCards([post('same', 'One'), post('same', 'Two')]), /same/);
+});
+
+test('every card title and label is drawn from the committed Latin fonts', () => {
+  for (const card of ogCards(posts)) {
+    assert.deepEqual(unsupportedCharacters(`${card.label} ${card.title}`), [], card.key);
+  }
+});
+
+test('unsupportedCharacters lists each character the card fonts have no width for, once', () => {
+  assert.deepEqual(unsupportedCharacters("Can't pay more than ₹2000? What to check → “now” – done…"), []);
+  assert.deepEqual(unsupportedCharacters('UPI से ₹2000 से ज़्यादा'), ['स', 'े', 'ज', '़', '्', 'य', 'ा', 'द']);
+  assert.deepEqual(unsupportedCharacters('Café × 2'), ['é', '×']);
+});
+
+test('a card with text the fonts cannot draw stops the build instead of rendering missing glyphs', () => {
+  assert.throws(() => ogCards([post('hindi-how-to', 'UPI से ₹2000 से ज़्यादा कैसे भेजें')]), /hindi-how-to.*Latin/s);
+  assert.throws(() => ogCards([post('cafe', 'Café bills')]), /cafe.*"é"/s);
 });
 
 test('card copy states no fee, rate or limit', () => {
