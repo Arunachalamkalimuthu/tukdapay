@@ -263,6 +263,8 @@ h1, h2, h3 { letter-spacing: -0.02em; line-height: 1.15; margin: 0; text-wrap: b
   padding: 10px 14px; border-radius: var(--radius); text-decoration: none;
 }
 .skip:focus { left: var(--gutter); }
+/* RouteFocus focuses <main> after a page change from the header or footer: a container, so no ring. */
+#main:focus { outline: none; }
 
 /* ===== Forced colours ===== */
 @media (forced-colors: active) {

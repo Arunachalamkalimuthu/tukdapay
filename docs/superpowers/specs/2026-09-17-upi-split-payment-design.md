@@ -1,16 +1,19 @@
+> Historical: the design this repo started from. README.md and
+> CONTRIBUTING.md describe the current app and its copy rules.
+
 # UPI Split Payment — Design
 
 Date: 2026-09-17
 
 ## Purpose
 
-A consumer-side web app that splits a payment larger than a threshold
-(default ₹1999 per transaction) into several UPI payments, each at or
-under the threshold, and hands each one to the user's UPI app as a
-ready-made `upi://pay` intent.
+A consumer-side web app that splits one bill into several UPI payments
+of at most a chosen amount (₹1,999 to start with), for when one payment
+won't go through in one go or the shop asks for smaller payments, and
+hands each part to the user's UPI app as a ready-made `upi://pay`
+intent. It isn't a way to avoid a fee: ask the shop before you split.
 
-The threshold is user-editable because the exact rule it targets may
-change; the app does not hard-code any tax logic.
+The amount is editable; the app states no UPI rule.
 
 ## Non-goals
 
@@ -81,7 +84,7 @@ so the merchant can match the pieces.
   UPI app on mobile), QR code (hidden on narrow screens), "Mark as
   paid" checkbox.
 - "Copy breakdown" button copies plain text
-  (`Part 1/3: ₹1999.00 to shop@upi` per line).
+  (`Part 1/3: ₹1,999.00 to shop@upi` per line).
 - "Start over" clears state.
 
 **Persistence**
